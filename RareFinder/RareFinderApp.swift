@@ -10,14 +10,20 @@ import SwiftData
 
 @main
 struct RareFinderApp: App {
+    @State private var appState = AppState()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Bounty.self,
+            IntelReport.self,
+            HunterProfile.self,
+            Reward.self,
+            AppNotification.self,
+            ModerationFlag.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -25,8 +31,27 @@ struct RareFinderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(appState)
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+private struct RootView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        Group {
+            if appState.hasCompletedOnboarding {
+                MainTabView()
+            } else {
+                OnboardingFlow()
+            }
+        }
+        .task {
+            SeedData.bootstrapIfNeeded(context: context)
+        }
     }
 }
