@@ -38,7 +38,7 @@ final class LocationService: NSObject {
     }
 
     /// Pure check — used by report submission and by unit tests.
-    static func isWithinGeofence(
+    nonisolated static func isWithinGeofence(
         userCoordinate: CLLocationCoordinate2D,
         targetCoordinate: CLLocationCoordinate2D,
         radius: CLLocationDistance = geofenceRadius

@@ -97,10 +97,12 @@ struct RadarView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(viewMode == mode ? .isSelected : [])
             }
         }
         .padding(4)
         .background(RFColor.surfaceContainer, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityLabel("View mode")
     }
 
     private var nearbySection: some View {

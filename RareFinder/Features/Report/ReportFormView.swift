@@ -78,6 +78,7 @@ struct ReportFormView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .disabled(note.isEmpty || submitting)
+                    .accessibilityHint(note.isEmpty ? "Add an observation note to enable submission" : "")
                 }
             }
             .navigationTitle("Submit Intel")

@@ -125,6 +125,7 @@ struct RFSecondaryButton: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 }
 
@@ -146,6 +147,7 @@ struct RFDarkButton: View {
             .shadow(color: RFColor.onSurface.opacity(0.25), radius: 18, y: 8)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 }
 
