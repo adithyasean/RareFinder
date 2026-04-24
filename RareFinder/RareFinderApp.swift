@@ -52,6 +52,7 @@ private struct RootView: View {
         }
         .task {
             SeedData.bootstrapIfNeeded(context: context)
+            await appState.sync.syncAll(context: context)
         }
     }
 }

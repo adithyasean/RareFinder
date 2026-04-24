@@ -12,12 +12,18 @@ final class AppState {
 
     let location: LocationService
     let notifications: NotificationService
+    let sync: SyncService
 
     private let onboardingKey = "rf.onboardingComplete"
 
-    init(location: LocationService? = nil, notifications: NotificationService? = nil) {
+    init(
+        location: LocationService? = nil,
+        notifications: NotificationService? = nil,
+        sync: SyncService? = nil
+    ) {
         self.location = location ?? LocationService()
         self.notifications = notifications ?? NotificationService()
+        self.sync = sync ?? SyncService()
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
     }
 

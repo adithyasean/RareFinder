@@ -1,0 +1,197 @@
+import Foundation
+import CoreLocation
+
+/// Thin HTTP client for the Rare Finder FastAPI backend.
+/// If the backend is unreachable, callers should fall back to locally seeded data.
+struct BackendClient {
+    var baseURL: URL
+    var session: URLSession
+
+    init(baseURL: URL = URL(string: "http://localhost:8000")!, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.session = session
+    }
+
+    // MARK: - DTOs
+
+    struct BountyDTO: Decodable {
+        let id: UUID
+        let title: String
+        let summary: String
+        let detail: String
+        let category: String
+        let status: String
+        let latitude: Double
+        let longitude: Double
+        let district: String
+        let verified_count: Int
+        let upvotes: Int
+        let downvotes: Int
+        let intel_score: Int
+        let symbol: String
+        let created_at: Date
+        let updated_at: Date
+    }
+
+    struct IntelReportDTO: Decodable {
+        let id: UUID
+        let bounty_id: UUID?
+        let hunter_name: String
+        let hunter_seed: String
+        let note: String
+        let status: String
+        let district: String
+        let latitude: Double
+        let longitude: Double
+        let upvotes: Int
+        let downvotes: Int
+        let symbol: String
+        let points_awarded: Int
+        let created_at: Date
+    }
+
+    struct HunterDTO: Decodable {
+        let id: UUID
+        let display_name: String
+        let handle: String
+        let avatar_seed: String
+        let points: Int
+        let rank: Int
+        let verifications: Int
+        let streak: Int
+        let is_moderator: Bool
+    }
+
+    struct RewardDTO: Decodable {
+        let id: UUID
+        let title: String
+        let summary: String
+        let detail: String
+        let cost: Int
+        let symbol: String
+        let is_featured: Bool
+    }
+
+    struct NotificationDTO: Decodable {
+        let id: UUID
+        let title: String
+        let body: String
+        let kind: String
+        let symbol: String
+        let read: Bool
+        let created_at: Date
+    }
+
+    struct ModerationFlagDTO: Decodable {
+        let id: UUID
+        let title: String
+        let handle: String
+        let reason: String
+        let sighting_count: Int
+        let status: String
+        let created_at: Date
+    }
+
+    struct SubmitReportRequest: Encodable {
+        let bounty_id: UUID?
+        let hunter_name: String
+        let hunter_seed: String?
+        let note: String
+        let status: String
+        let district: String
+        let latitude: Double
+        let longitude: Double
+        let symbol: String
+        let is_geofence_verified: Bool
+    }
+
+    struct SubmitReportResponse: Decodable {
+        let report: IntelReportDTO
+        let bounty: BountyDTO
+        let points_awarded: Int
+        let new_balance: Int
+    }
+
+    // MARK: - Endpoints
+
+    func fetchBounties() async throws -> [BountyDTO] { try await get("/bounties") }
+    func fetchReports() async throws -> [IntelReportDTO] { try await get("/reports") }
+    func fetchHunter() async throws -> HunterDTO { try await get("/hunters/me") }
+    func fetchRewards() async throws -> [RewardDTO] { try await get("/rewards") }
+    func fetchNotifications() async throws -> [NotificationDTO] { try await get("/notifications") }
+    func fetchFlags() async throws -> [ModerationFlagDTO] { try await get("/moderation/flags") }
+
+    func submitReport(_ body: SubmitReportRequest) async throws -> SubmitReportResponse {
+        try await post("/reports", body: body)
+    }
+
+    // MARK: - Transport
+
+    private func get<T: Decodable>(_ path: String) async throws -> T {
+        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        request.timeoutInterval = 5
+        let (data, response) = try await session.data(for: request)
+        try Self.verify(response)
+        return try Self.decoder.decode(T.self, from: data)
+    }
+
+    private func post<B: Encodable, T: Decodable>(_ path: String, body: B) async throws -> T {
+        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 5
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try Self.encoder.encode(body)
+        let (data, response) = try await session.data(for: request)
+        try Self.verify(response)
+        return try Self.decoder.decode(T.self, from: data)
+    }
+
+    private static func verify(_ response: URLResponse) throws {
+        guard let http = response as? HTTPURLResponse else { return }
+        guard (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+    }
+
+    private static let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601WithFractional
+        return d
+    }()
+
+    private static let encoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+}
+
+private extension JSONDecoder.DateDecodingStrategy {
+    /// ISO-8601 with optional fractional seconds and timezones as emitted by FastAPI.
+    static var iso8601WithFractional: JSONDecoder.DateDecodingStrategy {
+        .custom { decoder in
+            let string = try decoder.singleValueContainer().decode(String.self)
+            if let d = ISO8601DateFormatter.rfWithFractional.date(from: string)
+                ?? ISO8601DateFormatter.rfPlain.date(from: string) {
+                return d
+            }
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "Unrecognized date: \(string)"
+            )
+        }
+    }
+}
+
+private extension ISO8601DateFormatter {
+    static let rfWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    static let rfPlain: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+}

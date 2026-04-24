@@ -1,14 +1,29 @@
 import SwiftUI
+import SwiftData
 import CoreLocation
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
     @AppStorage("rf.useMetricDistance") private var useMetric = true
     @AppStorage("rf.ghostMode") private var ghostMode = false
     @AppStorage("rf.highFrequencyAlerts") private var highFrequency = true
 
     var body: some View {
         Form {
+            Section("Backend Sync") {
+                HStack {
+                    Label("Status", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    Text(syncSummary).foregroundStyle(.secondary)
+                }
+                Button {
+                    Task { await appState.sync.syncAll(context: context) }
+                } label: {
+                    Label("Sync Now", systemImage: "arrow.down.circle.fill")
+                }
+            }
+
             Section("Grid Preferences") {
                 Toggle("Metric distance", isOn: $useMetric)
                 Toggle("Ghost Mode (hide from map)", isOn: $ghostMode)
@@ -60,6 +75,18 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+    }
+
+    private var syncSummary: String {
+        switch appState.sync.status {
+        case .idle: return "Idle"
+        case .syncing: return "Syncing…"
+        case .synced(let date):
+            let f = RelativeDateTimeFormatter()
+            f.unitsStyle = .short
+            return "Synced " + f.localizedString(for: date, relativeTo: .now)
+        case .offline(let msg): return "Offline — \(msg.prefix(30))"
+        }
     }
 
     private func statusDescription(_ s: CLAuthorizationStatus) -> String {
