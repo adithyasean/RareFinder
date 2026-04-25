@@ -40,6 +40,7 @@ struct ReportFormView: View {
                                 Text(b.title).tag(Bounty?.some(b))
                             }
                         }
+                        .pickerStyle(.navigationLink)
                     }
                 } header: {
                     Text("Intel Classification")
