@@ -30,7 +30,7 @@ struct RewardDetailView: View {
 
                     perks
 
-                    RFDarkButton(title: "Redeem Intel Access", icon: "bolt.fill", action: redeem)
+                    redeemControl
                 }
                 .padding(RFSpacing.lg)
                 .rfElevatedCard(cornerRadius: 32)
@@ -104,10 +104,37 @@ struct RewardDetailView: View {
         .rfCardStyle()
     }
 
+    @ViewBuilder
+    private var redeemControl: some View {
+        if reward.isClaimed {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                Text("ALREADY CLAIMED")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(2.4)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(RFColor.surfaceContainer)
+            )
+            .accessibilityLabel("Already claimed on \(reward.claimedAt?.formatted(date: .abbreviated, time: .shortened) ?? "")")
+        } else {
+            RFDarkButton(title: "Redeem Intel Access", icon: "bolt.fill", action: redeem)
+        }
+    }
+
     private func redeem() {
         guard let profile else { return }
+        guard !reward.isClaimed else {
+            redeemMessage = "This reward has already been claimed."
+            showRedeemAlert = true
+            return
+        }
         if let newBalance = EconomyService.redeem(balance: profile.points, cost: reward.cost) {
             profile.points = newBalance
+            reward.claimedAt = .now
             try? context.save()
             redeemMessage = "Access granted. \(reward.title) is now active."
         } else {

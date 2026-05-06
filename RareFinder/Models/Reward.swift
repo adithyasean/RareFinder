@@ -11,6 +11,8 @@ final class Reward {
     var symbol: String
     var isFeatured: Bool
     var createdAt: Date
+    var claimedAt: Date?
+    var isRemote: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -20,7 +22,9 @@ final class Reward {
         cost: Int,
         symbol: String,
         isFeatured: Bool = false,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        claimedAt: Date? = nil,
+        isRemote: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -30,5 +34,9 @@ final class Reward {
         self.symbol = symbol
         self.isFeatured = isFeatured
         self.createdAt = createdAt
+        self.claimedAt = claimedAt
+        self.isRemote = isRemote
     }
+
+    var isClaimed: Bool { claimedAt != nil }
 }

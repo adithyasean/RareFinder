@@ -14,6 +14,7 @@ final class ModerationFlag {
     var sightingCount: Int
     var statusRaw: String
     var createdAt: Date
+    var isRemote: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -22,7 +23,8 @@ final class ModerationFlag {
         reason: String,
         sightingCount: Int = 1,
         status: FlagStatus = .pending,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        isRemote: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -31,6 +33,7 @@ final class ModerationFlag {
         self.sightingCount = sightingCount
         self.statusRaw = status.rawValue
         self.createdAt = createdAt
+        self.isRemote = isRemote
     }
 
     var status: FlagStatus {

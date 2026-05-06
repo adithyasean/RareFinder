@@ -7,9 +7,6 @@ struct RadarView: View {
     @Query(sort: [SortDescriptor(\Bounty.intelScore, order: .reverse)]) private var bounties: [Bounty]
     @State private var searchText: String = ""
     @State private var selectedCategory: BountyCategory? = nil
-    @State private var viewMode: ViewMode = .list
-
-    enum ViewMode: String, CaseIterable { case list = "List View", map = "Map" }
 
     var body: some View {
         NavigationStack {
@@ -17,7 +14,6 @@ struct RadarView: View {
                 VStack(alignment: .leading, spacing: RFSpacing.lg) {
                     searchField
                     categoryChips
-                    viewToggle
                     nearbySection
                 }
                 .padding(.horizontal, RFSpacing.lg)
@@ -78,31 +74,6 @@ struct RadarView: View {
                 }
             }
         }
-    }
-
-    private var viewToggle: some View {
-        HStack(spacing: 4) {
-            ForEach(ViewMode.allCases, id: \.rawValue) { mode in
-                Button {
-                    viewMode = mode
-                } label: {
-                    Text(mode.rawValue)
-                        .font(.system(size: 13, weight: .heavy))
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .foregroundStyle(viewMode == mode ? RFColor.onSurface : RFColor.onSurfaceVariant.opacity(0.6))
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(viewMode == mode ? Color.white : .clear)
-                                .shadow(color: .black.opacity(viewMode == mode ? 0.06 : 0), radius: 3, y: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(viewMode == mode ? .isSelected : [])
-            }
-        }
-        .padding(4)
-        .background(RFColor.surfaceContainer, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityLabel("View mode")
     }
 
     private var nearbySection: some View {

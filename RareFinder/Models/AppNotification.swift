@@ -17,6 +17,7 @@ final class AppNotification {
     var createdAt: Date
     var read: Bool
     var symbol: String
+    var isRemote: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -25,7 +26,8 @@ final class AppNotification {
         kind: NotificationKind = .vicinity,
         createdAt: Date = .now,
         read: Bool = false,
-        symbol: String = "bell.fill"
+        symbol: String = "bell.fill",
+        isRemote: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -34,6 +36,7 @@ final class AppNotification {
         self.createdAt = createdAt
         self.read = read
         self.symbol = symbol
+        self.isRemote = isRemote
     }
 
     var kind: NotificationKind {

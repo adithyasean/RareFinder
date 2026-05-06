@@ -5,9 +5,12 @@ import CoreLocation
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var context
+    @Query private var profiles: [HunterProfile]
     @AppStorage("rf.useMetricDistance") private var useMetric = true
     @AppStorage("rf.ghostMode") private var ghostMode = false
     @AppStorage("rf.highFrequencyAlerts") private var highFrequency = true
+
+    private var profile: HunterProfile? { profiles.first }
 
     var body: some View {
         Form {
@@ -21,6 +24,11 @@ struct SettingsView: View {
                     Task { await appState.sync.syncAll(context: context) }
                 } label: {
                     Label("Sync Now", systemImage: "arrow.down.circle.fill")
+                }
+                Button(role: .destructive) {
+                    resetLocalCache()
+                } label: {
+                    Label("Reset Local Cache", systemImage: "trash")
                 }
             }
 
@@ -48,6 +56,23 @@ struct SettingsView: View {
                 } label: {
                     Label("Request Notifications", systemImage: "bell.badge.fill")
                 }
+            }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { profile?.isModerator ?? false },
+                    set: { newValue in
+                        profile?.isModerator = newValue
+                        try? context.save()
+                    }
+                )) {
+                    Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                }
+            } header: {
+                Text("Developer")
+            } footer: {
+                Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
+                    .font(.caption)
             }
 
             Section("About") {
@@ -86,6 +111,23 @@ struct SettingsView: View {
             f.unitsStyle = .short
             return "Synced " + f.localizedString(for: date, relativeTo: .now)
         case .offline(let msg): return "Offline — \(msg.prefix(30))"
+        }
+    }
+
+    private func resetLocalCache() {
+        for type in [
+            Bounty.self as any PersistentModel.Type,
+            IntelReport.self,
+            Reward.self,
+            AppNotification.self,
+            ModerationFlag.self
+        ] {
+            try? context.delete(model: type)
+        }
+        try? context.save()
+        Task {
+            await appState.sync.syncAll(context: context)
+            appState.bootstrap(context: context)
         }
     }
 

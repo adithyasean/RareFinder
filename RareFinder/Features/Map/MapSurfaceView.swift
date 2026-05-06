@@ -4,8 +4,8 @@ import MapKit
 import CoreLocation
 
 /// Advanced iOS feature #1 — Dynamic Map Overlays.
-/// Active bounties are rendered with a tinted MKCircle "Bounty Zone".
-/// Stale areas (last update > 6h ago) are shaded with a "Fog of War" overlay.
+/// Active bounties are rendered with a tinted MapCircle "Bounty Zone".
+/// Stale areas (last update > 6h ago) are shaded with a wider, dim "Fog of War" halo.
 struct MapSurfaceView: View {
     @Query private var bounties: [Bounty]
     @Environment(AppState.self) private var appState
@@ -22,16 +22,17 @@ struct MapSurfaceView: View {
                     UserAnnotation()
 
                     ForEach(bounties) { bounty in
-                        // Bounty Zone — MKCircle rendered natively
+                        // Fog-of-War halo behind stale zones — wider, dim circular haze.
+                        if isStale(bounty) {
+                            MapCircle(center: bounty.coordinate, radius: 520)
+                                .foregroundStyle(Color.black.opacity(0.10))
+                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                        }
+
+                        // Bounty Zone — MapCircle rendered natively.
                         MapCircle(center: bounty.coordinate, radius: 180)
                             .foregroundStyle(bounty.status.tint.opacity(isStale(bounty) ? 0.05 : 0.18))
                             .stroke(bounty.status.tint.opacity(isStale(bounty) ? 0.2 : 0.7), lineWidth: 2)
-
-                        // Fog-of-War polygon for stale zones
-                        if isStale(bounty) {
-                            MapPolygon(coordinates: fogPolygon(around: bounty.coordinate))
-                                .foregroundStyle(Color.black.opacity(0.20))
-                        }
 
                         Marker(bounty.title, systemImage: bounty.symbol, coordinate: bounty.coordinate)
                             .tint(bounty.status.tint)
@@ -71,17 +72,6 @@ struct MapSurfaceView: View {
 
     private func isStale(_ b: Bounty) -> Bool {
         Date.now.timeIntervalSince(b.updatedAt) > 6 * 3600
-    }
-
-    /// Small rotated rectangle around a coordinate to draw a Fog-of-War overlay.
-    private func fogPolygon(around center: CLLocationCoordinate2D) -> [CLLocationCoordinate2D] {
-        let delta = 0.0035
-        return [
-            CLLocationCoordinate2D(latitude: center.latitude + delta,   longitude: center.longitude - delta*1.4),
-            CLLocationCoordinate2D(latitude: center.latitude + delta*0.7, longitude: center.longitude + delta*1.4),
-            CLLocationCoordinate2D(latitude: center.latitude - delta,   longitude: center.longitude + delta*1.2),
-            CLLocationCoordinate2D(latitude: center.latitude - delta*0.7, longitude: center.longitude - delta*1.2)
-        ]
     }
 }
 

@@ -49,6 +49,7 @@ final class SyncService {
     private func mergeBounties(_ dtos: [BackendClient.BountyDTO], context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<Bounty>())
         let index = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
         for dto in dtos {
             if let local = index[dto.id] {
                 local.title = dto.title
@@ -65,6 +66,7 @@ final class SyncService {
                 local.intelScore = dto.intel_score
                 local.symbol = dto.symbol
                 local.updatedAt = dto.updated_at
+                local.isRemote = true
             } else {
                 context.insert(Bounty(
                     id: dto.id,
@@ -80,10 +82,14 @@ final class SyncService {
                     downvotes: dto.downvotes,
                     intelScore: dto.intel_score,
                     symbol: dto.symbol,
+                    isRemote: true,
                     createdAt: dto.created_at,
                     updatedAt: dto.updated_at
                 ))
             }
+        }
+        for stale in existing where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
         }
     }
 
@@ -91,6 +97,7 @@ final class SyncService {
         let existingReports = try context.fetch(FetchDescriptor<IntelReport>())
         let reportIndex = Dictionary(uniqueKeysWithValues: existingReports.map { ($0.id, $0) })
         let bountyIndex = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<Bounty>()).map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
         for dto in dtos {
             let bounty = dto.bounty_id.flatMap { bountyIndex[$0] }
             if let local = reportIndex[dto.id] {
@@ -106,6 +113,7 @@ final class SyncService {
                 local.symbol = dto.symbol
                 local.pointsAwarded = dto.points_awarded
                 local.bounty = bounty
+                local.isRemote = true
             } else {
                 context.insert(IntelReport(
                     id: dto.id,
@@ -119,10 +127,14 @@ final class SyncService {
                     downvotes: dto.downvotes,
                     symbol: dto.symbol,
                     pointsAwarded: dto.points_awarded,
+                    isRemote: true,
                     createdAt: dto.created_at,
                     bounty: bounty
                 ))
             }
+        }
+        for stale in existingReports where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
         }
     }
 
@@ -155,6 +167,7 @@ final class SyncService {
     private func mergeRewards(_ dtos: [BackendClient.RewardDTO], context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<Reward>())
         let index = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
         for dto in dtos {
             if let local = index[dto.id] {
                 local.title = dto.title
@@ -163,6 +176,7 @@ final class SyncService {
                 local.cost = dto.cost
                 local.symbol = dto.symbol
                 local.isFeatured = dto.is_featured
+                local.isRemote = true
             } else {
                 context.insert(Reward(
                     id: dto.id,
@@ -171,15 +185,20 @@ final class SyncService {
                     detail: dto.detail,
                     cost: dto.cost,
                     symbol: dto.symbol,
-                    isFeatured: dto.is_featured
+                    isFeatured: dto.is_featured,
+                    isRemote: true
                 ))
             }
+        }
+        for stale in existing where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
         }
     }
 
     private func mergeNotifications(_ dtos: [BackendClient.NotificationDTO], context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<AppNotification>())
         let index = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
         for dto in dtos {
             if let local = index[dto.id] {
                 local.title = dto.title
@@ -187,6 +206,7 @@ final class SyncService {
                 local.kindRaw = dto.kind
                 local.symbol = dto.symbol
                 local.read = dto.read
+                local.isRemote = true
             } else {
                 context.insert(AppNotification(
                     id: dto.id,
@@ -195,15 +215,20 @@ final class SyncService {
                     kind: NotificationKind(rawValue: dto.kind) ?? .system,
                     createdAt: dto.created_at,
                     read: dto.read,
-                    symbol: dto.symbol
+                    symbol: dto.symbol,
+                    isRemote: true
                 ))
             }
+        }
+        for stale in existing where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
         }
     }
 
     private func mergeFlags(_ dtos: [BackendClient.ModerationFlagDTO], context: ModelContext) throws {
         let existing = try context.fetch(FetchDescriptor<ModerationFlag>())
         let index = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
         for dto in dtos {
             if let local = index[dto.id] {
                 local.title = dto.title
@@ -211,6 +236,7 @@ final class SyncService {
                 local.reason = dto.reason
                 local.sightingCount = dto.sighting_count
                 local.statusRaw = dto.status
+                local.isRemote = true
             } else {
                 context.insert(ModerationFlag(
                     id: dto.id,
@@ -219,9 +245,13 @@ final class SyncService {
                     reason: dto.reason,
                     sightingCount: dto.sighting_count,
                     status: FlagStatus(rawValue: dto.status) ?? .pending,
-                    createdAt: dto.created_at
+                    createdAt: dto.created_at,
+                    isRemote: true
                 ))
             }
+        }
+        for stale in existing where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
         }
     }
 }
