@@ -10,7 +10,19 @@ import SwiftData
 
 @main
 struct RareFinderApp: App {
-    @State private var appState = AppState()
+    @State private var appState: AppState
+
+    init() {
+        // UI-test launch flags. Must run before AppState reads UserDefaults.
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-RFUITestsReset") {
+            UserDefaults.standard.removeObject(forKey: "rf.onboardingComplete")
+        }
+        if args.contains("-RFUITestsSkipOnboarding") {
+            UserDefaults.standard.set(true, forKey: "rf.onboardingComplete")
+        }
+        _appState = State(initialValue: AppState())
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
