@@ -8,6 +8,20 @@ import Observation
 final class NotificationService {
     private(set) var authorized: Bool = false
 
+    private let foregroundDelegate = ForegroundPresenter()
+
+    init() {
+        UNUserNotificationCenter.current().delegate = foregroundDelegate
+        Task { await refreshAuthorization() }
+    }
+
+    func refreshAuthorization() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        authorized = settings.authorizationStatus == .authorized
+            || settings.authorizationStatus == .provisional
+            || settings.authorizationStatus == .ephemeral
+    }
+
     func requestAuthorization() async {
         do {
             let granted = try await UNUserNotificationCenter.current()
@@ -27,5 +41,15 @@ final class NotificationService {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, seconds), repeats: false)
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         try? await UNUserNotificationCenter.current().add(request)
+    }
+}
+
+private final class ForegroundPresenter: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound, .list])
     }
 }

@@ -9,6 +9,8 @@ struct ReportFormView: View {
     @Query private var bounties: [Bounty]
     @Query private var profiles: [HunterProfile]
 
+    let prefilledBounty: Bounty?
+
     @State private var category: BountyCategory = .fuelGrid
     @State private var status: BountyStatus = .available
     @State private var note: String = ""
@@ -18,6 +20,10 @@ struct ReportFormView: View {
     @State private var showSuccess = false
     @State private var awardedPoints = 0
     @State private var submitting = false
+
+    init(prefilledBounty: Bounty? = nil) {
+        self.prefilledBounty = prefilledBounty
+    }
 
     var body: some View {
         NavigationStack {
@@ -89,6 +95,13 @@ struct ReportFormView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+            }
+            .onAppear {
+                if let b = prefilledBounty, matchedBounty == nil {
+                    matchedBounty = b
+                    category = b.category
+                    status = b.status
                 }
             }
             .fullScreenCoverCompat(isPresented: $showSuccess) {

@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import Observation
+import UserNotifications
 
 /// Wraps CoreLocation for bounty discovery, proof-of-presence, and geofencing.
 @Observable
@@ -101,13 +102,25 @@ extension LocationService: CLLocationManagerDelegate {
     #if os(iOS)
     nonisolated func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         guard let circular = region as? CLCircularRegion else { return }
+        let identifier = circular.identifier
         Task { @MainActor in
             NotificationCenter.default.post(
                 name: .bountyRegionEntered,
                 object: nil,
-                userInfo: ["id": circular.identifier]
+                userInfo: ["id": identifier]
             )
         }
+        let content = UNMutableNotificationContent()
+        content.title = "Vicinity match"
+        content.body = "You're within 50 m of a tracked bounty. Verify and earn Trust Points."
+        content.sound = .default
+        content.userInfo = ["bountyId": identifier]
+        let request = UNNotificationRequest(
+            identifier: "rf.region.\(identifier)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
     #endif
 }

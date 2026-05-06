@@ -1,10 +1,15 @@
 import SwiftUI
+import SwiftData
 import CoreLocation
 
 struct DetailView: View {
     let bounty: Bounty
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
+
+    @State private var showReportSheet = false
+    @State private var scannerToast: String?
 
     var body: some View {
         ScrollView {
@@ -22,6 +27,43 @@ struct DetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         #endif
         .ignoresSafeArea(edges: .top)
+        .sheet(isPresented: $showReportSheet) {
+            ReportFormView(prefilledBounty: bounty)
+        }
+    }
+
+    private var shareText: String {
+        "Rare Finder bounty — \(bounty.title) (\(bounty.district)). \(bounty.summary)"
+    }
+
+    private func launchScanner() {
+        appState.location.requestAuthorization()
+        appState.location.monitor(bounty: bounty)
+
+        let appNote = AppNotification(
+            title: "Scanner armed",
+            body: "We'll alert you when you're within 50 m of \(bounty.title).",
+            kind: .vicinity,
+            symbol: "scope"
+        )
+        context.insert(appNote)
+        try? context.save()
+
+        Task {
+            if !appState.notifications.authorized {
+                await appState.notifications.requestAuthorization()
+            }
+            await appState.notifications.scheduleVicinityAlert(
+                title: "Scanner armed: \(bounty.title)",
+                body: "Tracking \(bounty.district). You'll get a vicinity alert when in range.",
+                after: 1
+            )
+        }
+
+        withAnimation { scannerToast = "Scanner armed for \(bounty.district)" }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { scannerToast = nil }
+        }
     }
 
     private var hero: some View {
@@ -115,12 +157,40 @@ struct DetailView: View {
 
             VStack(spacing: RFSpacing.sm) {
                 RFDarkButton(title: "Launch Scanner", icon: "scope") {
-                    appState.location.monitor(bounty: bounty)
+                    launchScanner()
                 }
                 HStack(spacing: RFSpacing.sm) {
-                    RFSecondaryButton(title: "Add Intel", icon: "plus.circle.fill") { }
-                    RFSecondaryButton(title: "Dispatch", icon: "square.and.arrow.up") { }
+                    RFSecondaryButton(title: "Add Intel", icon: "plus.circle.fill") {
+                        showReportSheet = true
+                    }
+                    ShareLink(item: shareText) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("DISPATCH")
+                                .font(.system(size: 11, weight: .black))
+                                .tracking(2.4)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .foregroundStyle(RFColor.onSurface)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(.background)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(RFColor.outlineVariant.opacity(0.4), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dispatch — share this bounty")
                 }
+            }
+            if let toast = scannerToast {
+                Text(toast)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(RFColor.secondary)
+                    .padding(.top, 4)
+                    .transition(.opacity)
             }
         }
         .padding(RFSpacing.lg)
