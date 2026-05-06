@@ -5,9 +5,12 @@ import CoreLocation
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var context
+    @Query private var profiles: [HunterProfile]
     @AppStorage("rf.useMetricDistance") private var useMetric = true
     @AppStorage("rf.ghostMode") private var ghostMode = false
     @AppStorage("rf.highFrequencyAlerts") private var highFrequency = true
+
+    private var profile: HunterProfile? { profiles.first }
 
     var body: some View {
         Form {
@@ -48,6 +51,23 @@ struct SettingsView: View {
                 } label: {
                     Label("Request Notifications", systemImage: "bell.badge.fill")
                 }
+            }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { profile?.isModerator ?? false },
+                    set: { newValue in
+                        profile?.isModerator = newValue
+                        try? context.save()
+                    }
+                )) {
+                    Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                }
+            } header: {
+                Text("Developer")
+            } footer: {
+                Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
+                    .font(.caption)
             }
 
             Section("About") {

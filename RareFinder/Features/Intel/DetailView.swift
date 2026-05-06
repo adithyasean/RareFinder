@@ -7,9 +7,14 @@ struct DetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var context
+    @Query private var profiles: [HunterProfile]
 
     @State private var showReportSheet = false
     @State private var scannerToast: String?
+    @State private var isClaimed: Bool = false
+
+    private var profile: HunterProfile? { profiles.first }
+    private var verifyKey: String { "rf.verified.\(bounty.id.uuidString)" }
 
     var body: some View {
         ScrollView {
@@ -29,6 +34,9 @@ struct DetailView: View {
         .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $showReportSheet) {
             ReportFormView(prefilledBounty: bounty)
+        }
+        .onAppear {
+            isClaimed = UserDefaults.standard.bool(forKey: verifyKey)
         }
     }
 
@@ -159,6 +167,7 @@ struct DetailView: View {
                 RFDarkButton(title: "Launch Scanner", icon: "scope") {
                     launchScanner()
                 }
+                verifyButton
                 HStack(spacing: RFSpacing.sm) {
                     RFSecondaryButton(title: "Add Intel", icon: "plus.circle.fill") {
                         showReportSheet = true
@@ -196,6 +205,92 @@ struct DetailView: View {
         .padding(RFSpacing.lg)
         .rfElevatedCard(cornerRadius: 36)
         .padding(.top, 16)
+    }
+
+    @ViewBuilder
+    private var verifyButton: some View {
+        if isClaimed {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                Text("VERIFIED — POINTS CLAIMED")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(2.4)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .foregroundStyle(RFColor.secondary)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(RFColor.secondary.opacity(0.12))
+            )
+            .accessibilityLabel("Already verified. Trust Points awarded.")
+        } else {
+            RFSecondaryButton(title: "Verify Bounty (+\(verifyAward) pts)", icon: "checkmark.shield.fill") {
+                verifyBounty()
+            }
+        }
+    }
+
+    private var verifyAward: Int {
+        EconomyService.pointsForReport(quality: .verification, isGeofenceVerified: true)
+    }
+
+    private func verifyBounty() {
+        appState.location.requestAuthorization()
+        appState.location.start()
+
+        guard let here = appState.location.currentLocation else {
+            showToast("Acquiring GPS… try again in a moment.")
+            return
+        }
+
+        let inside = LocationService.isWithinGeofence(
+            userCoordinate: here.coordinate,
+            targetCoordinate: bounty.coordinate
+        )
+        guard inside else {
+            showToast("Move within 50 m of \(bounty.district) to verify.")
+            return
+        }
+
+        let points = verifyAward
+        bounty.verifiedCount += 1
+        bounty.upvotes += 1
+        bounty.updatedAt = .now
+        profile?.points += points
+        profile?.verifications += 1
+
+        let receipt = IntelReport(
+            hunterName: profile?.displayName ?? "You",
+            hunterSeed: profile?.avatarSeed,
+            note: "Geofence verified — proof of presence within 50 m.",
+            status: bounty.status,
+            district: bounty.district,
+            coordinate: bounty.coordinate,
+            symbol: "checkmark.shield.fill",
+            pointsAwarded: points,
+            bounty: bounty
+        )
+        context.insert(receipt)
+
+        let appNote = AppNotification(
+            title: "Verified +\(points) Trust XP",
+            body: "Proof-of-presence confirmed at \(bounty.title).",
+            kind: .reward,
+            symbol: "checkmark.seal.fill"
+        )
+        context.insert(appNote)
+        try? context.save()
+
+        UserDefaults.standard.set(true, forKey: verifyKey)
+        isClaimed = true
+        showToast("Verified — +\(points) Trust Points awarded.")
+    }
+
+    private func showToast(_ text: String) {
+        withAnimation { scannerToast = text }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            withAnimation { scannerToast = nil }
+        }
     }
 
     private var geofenceCallout: some View {

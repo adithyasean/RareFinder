@@ -61,15 +61,38 @@ final class LocationService: NSObject {
     func monitor(bounty: Bounty) {
         #if os(iOS)
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
+        let id = bounty.id.uuidString
+        guard !monitoredRegions.contains(id) else { return }
         let region = CLCircularRegion(
             center: bounty.coordinate,
             radius: Self.geofenceRadius,
-            identifier: bounty.id.uuidString
+            identifier: id
         )
         region.notifyOnEntry = true
         region.notifyOnExit = false
         manager.startMonitoring(for: region)
         monitoredRegions.insert(region.identifier)
+        #endif
+    }
+
+    /// Re-registers geofences for a set of bounties, capped at the system limit (20).
+    /// If a current location is known, the closest bounties are picked first.
+    func monitorAll(bounties: [Bounty]) {
+        #if os(iOS)
+        let limit = 20
+        let ordered: [Bounty]
+        if let here = currentLocation {
+            ordered = bounties.sorted {
+                let a = CLLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
+                let b = CLLocation(latitude: $1.coordinate.latitude, longitude: $1.coordinate.longitude)
+                return a.distance(from: here) < b.distance(from: here)
+            }
+        } else {
+            ordered = bounties
+        }
+        for bounty in ordered.prefix(limit) {
+            monitor(bounty: bounty)
+        }
         #endif
     }
 }
