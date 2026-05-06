@@ -17,6 +17,7 @@ final class IntelReport {
     var createdAt: Date
     var symbol: String
     var pointsAwarded: Int
+    var isRemote: Bool = false
     var bounty: Bounty?
 
     init(
@@ -31,6 +32,7 @@ final class IntelReport {
         downvotes: Int = 0,
         symbol: String = "mappin.and.ellipse",
         pointsAwarded: Int = 50,
+        isRemote: Bool = false,
         createdAt: Date = .now,
         bounty: Bounty? = nil
     ) {
@@ -46,6 +48,7 @@ final class IntelReport {
         self.downvotes = downvotes
         self.symbol = symbol
         self.pointsAwarded = pointsAwarded
+        self.isRemote = isRemote
         self.createdAt = createdAt
         self.bounty = bounty
     }

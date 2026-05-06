@@ -121,6 +121,26 @@ struct BoostCostTests {
     }
 }
 
+// MARK: - Reward
+
+@Suite("Reward — claim state")
+struct RewardClaimTests {
+
+    @Test("new reward is not claimed")
+    func freshRewardIsUnclaimed() {
+        let r = Reward(title: "Test", summary: "", detail: "", cost: 100, symbol: "bolt.fill")
+        #expect(r.claimedAt == nil)
+        #expect(r.isClaimed == false)
+    }
+
+    @Test("setting claimedAt flips isClaimed")
+    func claimingFlipsState() {
+        let r = Reward(title: "Test", summary: "", detail: "", cost: 100, symbol: "bolt.fill")
+        r.claimedAt = Date()
+        #expect(r.isClaimed == true)
+    }
+}
+
 // MARK: - LocationService
 
 @Suite("Distance — geofence boundary checks")

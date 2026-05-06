@@ -25,6 +25,11 @@ struct SettingsView: View {
                 } label: {
                     Label("Sync Now", systemImage: "arrow.down.circle.fill")
                 }
+                Button(role: .destructive) {
+                    resetLocalCache()
+                } label: {
+                    Label("Reset Local Cache", systemImage: "trash")
+                }
             }
 
             Section("Grid Preferences") {
@@ -106,6 +111,23 @@ struct SettingsView: View {
             f.unitsStyle = .short
             return "Synced " + f.localizedString(for: date, relativeTo: .now)
         case .offline(let msg): return "Offline — \(msg.prefix(30))"
+        }
+    }
+
+    private func resetLocalCache() {
+        for type in [
+            Bounty.self as any PersistentModel.Type,
+            IntelReport.self,
+            Reward.self,
+            AppNotification.self,
+            ModerationFlag.self
+        ] {
+            try? context.delete(model: type)
+        }
+        try? context.save()
+        Task {
+            await appState.sync.syncAll(context: context)
+            appState.bootstrap(context: context)
         }
     }
 

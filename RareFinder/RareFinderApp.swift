@@ -52,7 +52,7 @@ private struct RootView: View {
         }
         .task {
             await appState.sync.syncAll(context: context)
-            await appState.bootstrap(context: context)
+            appState.bootstrap(context: context)
             if let bounties = try? context.fetch(FetchDescriptor<Bounty>()) {
                 appState.location.monitorAll(bounties: bounties)
             }
