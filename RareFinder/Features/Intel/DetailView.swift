@@ -27,12 +27,11 @@ struct DetailView: View {
                 }
                 .background(RFColor.surface)
                 .ignoresSafeArea(edges: .top)
-
-                navBar(geo: geo)
             }
         }
+        .tint(.white)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("")
-        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showReportSheet) {
             ReportFormView(prefilledBounty: bounty)
         }
@@ -41,23 +40,6 @@ struct DetailView: View {
         }
     }
 
-    private func navBar(geo: GeometryProxy) -> some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .buttonStyle(.plain)
-            Spacer()
-        }
-        .padding(.horizontal, RFSpacing.md)
-        .padding(.top, max(geo.safeAreaInsets.top, 12)) 
-    }
 
     private var shareText: String {
         "Rare Finder bounty — \(bounty.title) (\(bounty.district)). \(bounty.summary)"
