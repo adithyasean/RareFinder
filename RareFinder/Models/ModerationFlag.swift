@@ -13,6 +13,9 @@ final class ModerationFlag {
     var reason: String
     var sightingCount: Int
     var statusRaw: String
+    var category: String = "other"
+    var bountyID: UUID? = nil
+    var reportID: UUID? = nil
     var createdAt: Date
     var isRemote: Bool = false
 
@@ -23,6 +26,9 @@ final class ModerationFlag {
         reason: String,
         sightingCount: Int = 1,
         status: FlagStatus = .pending,
+        category: String = "other",
+        bountyID: UUID? = nil,
+        reportID: UUID? = nil,
         createdAt: Date = .now,
         isRemote: Bool = false
     ) {
@@ -32,6 +38,9 @@ final class ModerationFlag {
         self.reason = reason
         self.sightingCount = sightingCount
         self.statusRaw = status.rawValue
+        self.category = category
+        self.bountyID = bountyID
+        self.reportID = reportID
         self.createdAt = createdAt
         self.isRemote = isRemote
     }

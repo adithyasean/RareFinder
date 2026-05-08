@@ -320,6 +320,9 @@ final class SyncService {
                 local.reason = dto.reason
                 local.sightingCount = dto.sighting_count
                 local.statusRaw = dto.status
+                local.category = dto.category ?? "other"
+                local.bountyID = dto.bounty_id
+                local.reportID = dto.report_id
                 local.isRemote = true
             } else {
                 context.insert(ModerationFlag(
@@ -329,6 +332,9 @@ final class SyncService {
                     reason: dto.reason,
                     sightingCount: dto.sighting_count,
                     status: FlagStatus(rawValue: dto.status) ?? .pending,
+                    category: dto.category ?? "other",
+                    bountyID: dto.bounty_id,
+                    reportID: dto.report_id,
                     createdAt: dto.created_at,
                     isRemote: true
                 ))

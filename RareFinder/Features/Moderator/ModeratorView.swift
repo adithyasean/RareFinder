@@ -278,6 +278,10 @@ private struct FlagCard: View {
                         .font(.system(size: 9, weight: .black))
                         .tracking(1.2)
                         .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.5))
+                    HStack(spacing: 6) {
+                        TargetPill(label: targetLabel)
+                        CategoryPill(category: flag.category)
+                    }
                 }
                 Spacer()
                 Text(flag.status.rawValue.uppercased())
@@ -319,11 +323,52 @@ private struct FlagCard: View {
         .opacity(isProcessing ? 0.7 : 1.0)
     }
 
+    private var targetLabel: String {
+        if flag.bountyID != nil { return "BOUNTY" }
+        if flag.reportID != nil { return "INTEL" }
+        return "ORPHAN"
+    }
+
     private func statusTint(_ s: FlagStatus) -> Color {
         switch s {
         case .pending: return RFColor.tertiary
         case .quarantined: return RFColor.outline
         case .actioned: return RFColor.secondary
+        }
+    }
+}
+
+private struct TargetPill: View {
+    let label: String
+    var body: some View {
+        Text(label)
+            .font(.system(size: 8, weight: .black))
+            .tracking(1.4)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(RFColor.onSurface, in: Capsule())
+    }
+}
+
+private struct CategoryPill: View {
+    let category: String
+    var body: some View {
+        let (text, tint) = mapping(category)
+        Text(text)
+            .font(.system(size: 8, weight: .black))
+            .tracking(1.4)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    private func mapping(_ c: String) -> (String, Color) {
+        switch c {
+        case "language": return ("DANGEROUS LANG", RFColor.tertiary)
+        case "duplicate": return ("DUPLICATE", RFColor.primary)
+        default: return (c.uppercased(), RFColor.onSurfaceVariant)
         }
     }
 }

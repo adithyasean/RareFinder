@@ -106,6 +106,9 @@ struct BackendClient {
         let sighting_count: Int
         let status: String
         let created_at: Date
+        let category: String?
+        let bounty_id: UUID?
+        let report_id: UUID?
     }
 
     struct ModerationStatsDTO: Decodable {
