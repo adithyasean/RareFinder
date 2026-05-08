@@ -4,10 +4,14 @@ import SwiftData
 struct NotificationsView: View {
     @Query(sort: [SortDescriptor(\AppNotification.createdAt, order: .reverse)]) private var notifications: [AppNotification]
     @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: RFSpacing.lg) {
+                ConnectionBanner(connection: appState.sync.connection) {
+                    Task { await appState.sync.syncAll(context: context) }
+                }
                 if !today.isEmpty {
                     section(title: "Grid Cycle: Today", items: today)
                 }
@@ -15,10 +19,13 @@ struct NotificationsView: View {
                     section(title: "Previous Cycle", items: earlier)
                 }
                 if notifications.isEmpty {
-                    EmptyStateCard(symbol: "bell.slash.fill", message: "No alerts yet. Enable location to activate the grid.")
+                    EmptyStateCard(symbol: "bell.slash.fill", message: "No alerts yet. Pull to sync, or enable location to activate the grid.")
                 }
             }
             .padding(RFSpacing.lg)
+        }
+        .refreshable {
+            await appState.sync.syncAll(context: context)
         }
         .background(RFColor.surface)
         .navigationTitle("Notifications")

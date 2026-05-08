@@ -120,15 +120,13 @@ struct SettingsView: View {
             IntelReport.self,
             Reward.self,
             AppNotification.self,
-            ModerationFlag.self
+            ModerationFlag.self,
+            HunterProfile.self
         ] {
             try? context.delete(model: type)
         }
         try? context.save()
-        Task {
-            await appState.sync.syncAll(context: context)
-            appState.bootstrap(context: context)
-        }
+        Task { await appState.sync.syncAll(context: context) }
     }
 
     private func statusDescription(_ s: CLAuthorizationStatus) -> String {

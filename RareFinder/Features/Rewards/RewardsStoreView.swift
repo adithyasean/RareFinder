@@ -4,17 +4,25 @@ import SwiftData
 struct RewardsStoreView: View {
     @Query(sort: [SortDescriptor(\Reward.cost, order: .forward)]) private var rewards: [Reward]
     @Query private var profiles: [HunterProfile]
+    @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
 
     var profile: HunterProfile? { profiles.first }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: RFSpacing.xl) {
+                ConnectionBanner(connection: appState.sync.connection) {
+                    Task { await appState.sync.syncAll(context: context) }
+                }
                 hunterCredit
                 supplyReserves
                 tierPromo
             }
             .padding(RFSpacing.lg)
+        }
+        .refreshable {
+            await appState.sync.syncAll(context: context)
         }
         .background(RFColor.surface)
         .navigationTitle("Rewards Store")

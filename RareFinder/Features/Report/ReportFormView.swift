@@ -20,6 +20,7 @@ struct ReportFormView: View {
     @State private var showSuccess = false
     @State private var awardedPoints = 0
     @State private var submitting = false
+    @State private var errorMessage: String?
 
     init(prefilledBounty: Bounty? = nil) {
         self.prefilledBounty = prefilledBounty
@@ -73,9 +74,16 @@ struct ReportFormView: View {
                         .font(.caption)
                 }
 
+                if let errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(RFColor.tertiary)
+                    }
+                }
+
                 Section {
                     Button {
-                        submit()
+                        Task { await submit() }
                     } label: {
                         HStack {
                             if submitting { ProgressView() }
@@ -113,66 +121,48 @@ struct ReportFormView: View {
         }
     }
 
-    private func submit() {
+    @MainActor
+    private func submit() async {
         submitting = true
-        let profile = profiles.first
-        let verified = verifyGeofence()
-        let quality: EconomyService.ReportQuality = matchedBounty == nil ? .firstSighting : .verification
-        let points = EconomyService.pointsForReport(quality: quality, isGeofenceVerified: verified || locationSet)
-        awardedPoints = points
+        errorMessage = nil
+        defer { submitting = false }
 
-        let coord = matchedBounty?.coordinate ?? appState.location.currentLocation?.coordinate
+        let profile = profiles.first
+        let verified = verifyGeofence() || locationSet
+
+        let coord = matchedBounty?.coordinate
+            ?? appState.location.currentLocation?.coordinate
             ?? CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
 
-        let report = IntelReport(
-            hunterName: profile?.displayName ?? "You",
-            hunterSeed: profile?.avatarSeed,
+        let request = BackendClient.SubmitReportRequest(
+            bounty_id: matchedBounty?.id,
+            hunter_name: profile?.displayName ?? "Guest Hunter",
+            hunter_seed: profile?.avatarSeed,
             note: note,
-            status: status,
-            district: matchedBounty?.district ?? "You",
-            coordinate: coord,
+            status: status.rawValue,
+            district: matchedBounty?.district ?? "Live",
+            latitude: coord.latitude,
+            longitude: coord.longitude,
             symbol: category.symbol,
-            pointsAwarded: points,
-            bounty: matchedBounty
+            is_geofence_verified: verified
         )
-        context.insert(report)
 
-        if let b = matchedBounty {
-            b.verifiedCount += 1
-            b.upvotes += 1
-            b.updatedAt = .now
-            b.status = status
-        } else {
-            let newBounty = Bounty(
-                title: "New Intel — \(category.rawValue)",
-                summary: String(note.prefix(60)),
-                detail: note,
-                category: category,
-                status: status,
-                coordinate: coord,
-                district: "Live",
-                verifiedCount: 1,
-                upvotes: 1
-            )
-            context.insert(newBounty)
-            report.bounty = newBounty
-        }
-
-        profile?.points += points
-        profile?.verifications += 1
-
-        try? context.save()
-
-        Task {
+        do {
+            let response = try await appState.sync.client.submitReport(request)
+            awardedPoints = response.points_awarded
+            // Re-pull the corpus so SwiftData reflects the authoritative
+            // backend state (new bounty, new report, updated counters,
+            // updated hunter balance).
+            await appState.sync.syncAll(context: context)
             await appState.notifications.scheduleVicinityAlert(
                 title: "Intel logged",
-                body: "You earned +\(points) Trust XP. Thanks, hunter.",
+                body: "You earned +\(response.points_awarded) Trust XP. Thanks, hunter.",
                 after: 0.5
             )
+            showSuccess = true
+        } catch {
+            errorMessage = "Submission failed: \(error.localizedDescription)"
         }
-
-        submitting = false
-        showSuccess = true
     }
 
     private func verifyGeofence() -> Bool {

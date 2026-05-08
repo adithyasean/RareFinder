@@ -12,12 +12,18 @@ struct RadarView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: RFSpacing.lg) {
+                    ConnectionBanner(connection: appState.sync.connection) {
+                        Task { await appState.sync.syncAll(context: context) }
+                    }
                     searchField
                     categoryChips
                     nearbySection
                 }
                 .padding(.horizontal, RFSpacing.lg)
                 .padding(.vertical, RFSpacing.md)
+            }
+            .refreshable {
+                await appState.sync.syncAll(context: context)
             }
             .background(RFColor.surface)
             .navigationTitle("Rare Finder")
@@ -33,6 +39,11 @@ struct RadarView: View {
                         Image(systemName: "bell.fill")
                     }
                     .accessibilityLabel("Notifications")
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    NavigationLink(destination: CategoriesView()) {
+                        Label("Categories", systemImage: "square.grid.2x2.fill")
+                    }
                 }
             }
         }

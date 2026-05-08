@@ -3,26 +3,42 @@ import SwiftData
 
 struct IntelFeedView: View {
     @Query(sort: [SortDescriptor(\IntelReport.createdAt, order: .reverse)]) private var reports: [IntelReport]
+    @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: RFSpacing.xl) {
-                    ForEach(reports) { report in
-                        NavigationLink {
-                            if let bounty = report.bounty {
-                                DetailView(bounty: bounty)
-                            } else {
-                                Text(report.note)
+                    ConnectionBanner(connection: appState.sync.connection) {
+                        Task { await appState.sync.syncAll(context: context) }
+                    }
+                    .padding(.horizontal, 4)
+                    if reports.isEmpty {
+                        EmptyStateCard(
+                            symbol: "antenna.radiowaves.left.and.right",
+                            message: "Pull to sync the satellite feed."
+                        )
+                    } else {
+                        ForEach(reports) { report in
+                            NavigationLink {
+                                if let bounty = report.bounty {
+                                    DetailView(bounty: bounty)
+                                } else {
+                                    Text(report.note)
+                                }
+                            } label: {
+                                IntelCard(report: report)
                             }
-                        } label: {
-                            IntelCard(report: report)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, RFSpacing.lg)
                 .padding(.vertical, RFSpacing.md)
+            }
+            .refreshable {
+                await appState.sync.syncAll(context: context)
             }
             .background(RFColor.surface)
             .navigationTitle("Satellite Feed")

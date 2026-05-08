@@ -449,6 +449,35 @@ final class RareFinderUITests: XCTestCase {
         XCTAssertTrue(empty.exists || anyNotification.waitForExistence(timeout: 4))
     }
 
+    // MARK: - Categories
+
+    @MainActor
+    func test_categories_toolbar_opens_grid_and_tap_shows_filtered_list() throws {
+        let app = launchAppOnTabs()
+        waitFor(app.navigationBars["Rare Finder"], 8)
+
+        // "Categories" appears in the toolbar overflow (secondary action).
+        let more = app.navigationBars.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
+        if more.waitForExistence(timeout: 3) { more.tap() }
+
+        let categories = app.buttons["Categories"]
+        waitFor(categories, 4)
+        categories.tap()
+
+        // CategoriesView has navigation title "Categories" and shows category tiles.
+        waitFor(app.navigationBars["Categories"], 6)
+        XCTAssertTrue(app.staticTexts["Medical"].waitForExistence(timeout: 4),
+                      "Expected Medical category tile in CategoriesView")
+
+        // Tap Medical tile to open the filtered list.
+        app.staticTexts["Medical"].tap()
+        let predicate = NSPredicate(format: "label CONTAINS[c] 'insulin' OR label CONTAINS[c] 'medical'")
+        let any = app.descendants(matching: .any).matching(predicate).firstMatch
+        XCTAssertTrue(any.waitForExistence(timeout: 6),
+                      "Expected filtered bounty list for Medical category")
+    }
+
     // MARK: - Map / Scanner
 
     @MainActor

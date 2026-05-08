@@ -5,9 +5,11 @@ struct RewardDetailView: View {
     let reward: Reward
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     @Query private var profiles: [HunterProfile]
     @State private var showRedeemAlert = false
     @State private var redeemMessage = ""
+    @State private var redeeming = false
 
     var profile: HunterProfile? { profiles.first }
 
@@ -121,24 +123,37 @@ struct RewardDetailView: View {
             )
             .accessibilityLabel("Already claimed on \(reward.claimedAt?.formatted(date: .abbreviated, time: .shortened) ?? "")")
         } else {
-            RFDarkButton(title: "Redeem Intel Access", icon: "bolt.fill", action: redeem)
+            RFDarkButton(
+                title: redeeming ? "Redeeming…" : "Redeem Intel Access",
+                icon: "bolt.fill"
+            ) {
+                Task { await redeem() }
+            }
+            .disabled(redeeming)
         }
     }
 
-    private func redeem() {
-        guard let profile else { return }
+    @MainActor
+    private func redeem() async {
         guard !reward.isClaimed else {
             redeemMessage = "This reward has already been claimed."
             showRedeemAlert = true
             return
         }
-        if let newBalance = EconomyService.redeem(balance: profile.points, cost: reward.cost) {
-            profile.points = newBalance
-            reward.claimedAt = .now
-            try? context.save()
-            redeemMessage = "Access granted. \(reward.title) is now active."
-        } else {
-            redeemMessage = "Insufficient Trust Points. Earn \(reward.cost - profile.points) more to unlock."
+        redeeming = true
+        defer { redeeming = false }
+        do {
+            let response = try await appState.sync.client.redeemReward(reward.id)
+            if response.success {
+                profile?.points = response.new_balance
+                reward.claimedAt = .now
+                try? context.save()
+                // Re-pull authoritative balance.
+                await appState.sync.syncAll(context: context)
+            }
+            redeemMessage = response.message
+        } catch {
+            redeemMessage = "Backend unreachable: \(error.localizedDescription)"
         }
         showRedeemAlert = true
     }

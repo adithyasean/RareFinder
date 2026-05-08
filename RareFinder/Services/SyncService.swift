@@ -10,16 +10,42 @@ final class SyncService {
         case idle, syncing, synced(Date), offline(String)
     }
 
-    private let client: BackendClient
+    enum Connection: Equatable {
+        case unknown
+        case online(Date)
+        case offline(String)
+
+        var isOnline: Bool {
+            if case .online = self { return true }
+            return false
+        }
+    }
+
+    let client: BackendClient
     private(set) var status: Status = .idle
+    private(set) var connection: Connection = .unknown
 
     init(client: BackendClient? = nil) {
         self.client = client ?? BackendClient()
     }
 
-    /// Attempts to pull the full backend corpus and merge it into SwiftData.
-    /// Missing records are inserted, known records are updated. Failures are
-    /// treated as non-fatal — callers continue with whatever is cached locally.
+    /// Lightweight reachability ping. Updates `connection` only.
+    @discardableResult
+    func ping() async -> Bool {
+        do {
+            try await client.health()
+            connection = .online(.now)
+            return true
+        } catch {
+            connection = .offline(error.localizedDescription)
+            return false
+        }
+    }
+
+    /// Pulls the full backend corpus and replaces SwiftData. Backend is the
+    /// single source of truth — any local rows without `isRemote == true`
+    /// are leftovers from older builds and are purged after a successful
+    /// sync to eliminate duplicates.
     func syncAll(context: ModelContext) async {
         status = .syncing
         do {
@@ -37,10 +63,13 @@ final class SyncService {
             try mergeRewards(rw, context: context)
             try mergeNotifications(n, context: context)
             try mergeFlags(f, context: context)
+            try purgeOrphans(context: context)
             try context.save()
             status = .synced(.now)
+            connection = .online(.now)
         } catch {
             status = .offline(error.localizedDescription)
+            connection = .offline(error.localizedDescription)
         }
     }
 
@@ -141,6 +170,7 @@ final class SyncService {
     private func mergeHunter(_ dto: BackendClient.HunterDTO, context: ModelContext) throws {
         let profiles = try context.fetch(FetchDescriptor<HunterProfile>())
         if let profile = profiles.first {
+            profile.id = dto.id
             profile.displayName = dto.display_name
             profile.handle = dto.handle
             profile.avatarSeed = dto.avatar_seed
@@ -149,6 +179,8 @@ final class SyncService {
             profile.verifications = dto.verifications
             profile.streak = dto.streak
             profile.isModerator = dto.is_moderator
+            // Drop any extra profiles that may have been seeded earlier.
+            for extra in profiles.dropFirst() { context.delete(extra) }
         } else {
             context.insert(HunterProfile(
                 id: dto.id,
@@ -253,5 +285,17 @@ final class SyncService {
         for stale in existing where stale.isRemote && !incomingIDs.contains(stale.id) {
             context.delete(stale)
         }
+    }
+
+    /// After a successful sync, every backend-owned row has been marked
+    /// `isRemote = true`. Anything still flagged `isRemote == false` is a
+    /// leftover from an older build that seeded fake data offline; purge it
+    /// so the user only ever sees the canonical backend corpus.
+    private func purgeOrphans(context: ModelContext) throws {
+        for b in try context.fetch(FetchDescriptor<Bounty>()) where !b.isRemote { context.delete(b) }
+        for r in try context.fetch(FetchDescriptor<IntelReport>()) where !r.isRemote { context.delete(r) }
+        for rw in try context.fetch(FetchDescriptor<Reward>()) where !rw.isRemote { context.delete(rw) }
+        for n in try context.fetch(FetchDescriptor<AppNotification>()) where !n.isRemote { context.delete(n) }
+        for f in try context.fetch(FetchDescriptor<ModerationFlag>()) where !f.isRemote { context.delete(f) }
     }
 }

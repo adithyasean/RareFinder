@@ -48,15 +48,6 @@ struct DetailView: View {
         appState.location.requestAuthorization()
         appState.location.monitor(bounty: bounty)
 
-        let appNote = AppNotification(
-            title: "Scanner armed",
-            body: "We'll alert you when you're within 50 m of \(bounty.title).",
-            kind: .vicinity,
-            symbol: "scope"
-        )
-        context.insert(appNote)
-        try? context.save()
-
         Task {
             if !appState.notifications.authorized {
                 await appState.notifications.requestAuthorization()
@@ -235,6 +226,11 @@ struct DetailView: View {
     }
 
     private func verifyBounty() {
+        Task { await verifyBountyAsync() }
+    }
+
+    @MainActor
+    private func verifyBountyAsync() async {
         appState.location.requestAuthorization()
         appState.location.start()
 
@@ -252,38 +248,28 @@ struct DetailView: View {
             return
         }
 
-        let points = verifyAward
-        bounty.verifiedCount += 1
-        bounty.upvotes += 1
-        bounty.updatedAt = .now
-        profile?.points += points
-        profile?.verifications += 1
-
-        let receipt = IntelReport(
-            hunterName: profile?.displayName ?? "You",
-            hunterSeed: profile?.avatarSeed,
+        let request = BackendClient.SubmitReportRequest(
+            bounty_id: bounty.id,
+            hunter_name: profile?.displayName ?? "Guest Hunter",
+            hunter_seed: profile?.avatarSeed,
             note: "Geofence verified — proof of presence within 50 m.",
-            status: bounty.status,
+            status: bounty.status.rawValue,
             district: bounty.district,
-            coordinate: bounty.coordinate,
+            latitude: bounty.latitude,
+            longitude: bounty.longitude,
             symbol: "checkmark.shield.fill",
-            pointsAwarded: points,
-            bounty: bounty
+            is_geofence_verified: true
         )
-        context.insert(receipt)
 
-        let appNote = AppNotification(
-            title: "Verified +\(points) Trust XP",
-            body: "Proof-of-presence confirmed at \(bounty.title).",
-            kind: .reward,
-            symbol: "checkmark.seal.fill"
-        )
-        context.insert(appNote)
-        try? context.save()
-
-        UserDefaults.standard.set(true, forKey: verifyKey)
-        isClaimed = true
-        showToast("Verified — +\(points) Trust Points awarded.")
+        do {
+            let response = try await appState.sync.client.submitReport(request)
+            await appState.sync.syncAll(context: context)
+            UserDefaults.standard.set(true, forKey: verifyKey)
+            isClaimed = true
+            showToast("Verified — +\(response.points_awarded) Trust Points awarded.")
+        } catch {
+            showToast("Backend offline — try again when reconnected.")
+        }
     }
 
     private func showToast(_ text: String) {

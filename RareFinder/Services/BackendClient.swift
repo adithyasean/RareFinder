@@ -2,7 +2,6 @@ import Foundation
 import CoreLocation
 
 /// Thin HTTP client for the Rare Finder FastAPI backend.
-/// If the backend is unreachable, callers should fall back to locally seeded data.
 struct BackendClient {
     var baseURL: URL
     var session: URLSession
@@ -112,7 +111,32 @@ struct BackendClient {
         let new_balance: Int
     }
 
+    struct CreateBountyRequest: Encodable {
+        let title: String
+        let summary: String
+        let detail: String
+        let category: String
+        let status: String
+        let latitude: Double
+        let longitude: Double
+        let district: String
+        let symbol: String
+    }
+
+    struct RedeemResponse: Decodable {
+        let success: Bool
+        let message: String
+        let new_balance: Int
+    }
+
     // MARK: - Endpoints
+
+    func health() async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/health"))
+        request.timeoutInterval = 4
+        let (_, response) = try await session.data(for: request)
+        try Self.verify(response)
+    }
 
     func fetchBounties() async throws -> [BountyDTO] { try await get("/bounties") }
     func fetchReports() async throws -> [IntelReportDTO] { try await get("/reports") }
@@ -125,7 +149,22 @@ struct BackendClient {
         try await post("/reports", body: body)
     }
 
+    func createBounty(_ body: CreateBountyRequest) async throws -> BountyDTO {
+        try await post("/bounties", body: body)
+    }
+
+    func redeemReward(_ id: UUID) async throws -> RedeemResponse {
+        try await post("/rewards/\(id.uuidString)/redeem", body: EmptyBody())
+    }
+
+    /// `action` ∈ { "quarantine", "action", "dismiss" }.
+    func moderationAction(flagID: UUID, action: String) async throws -> ModerationFlagDTO {
+        try await post("/moderation/flags/\(flagID.uuidString)/\(action)", body: EmptyBody())
+    }
+
     // MARK: - Transport
+
+    private struct EmptyBody: Encodable {}
 
     private func get<T: Decodable>(_ path: String) async throws -> T {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
@@ -140,7 +179,11 @@ struct BackendClient {
         request.httpMethod = "POST"
         request.timeoutInterval = 5
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try Self.encoder.encode(body)
+        if !(body is EmptyBody) {
+            request.httpBody = try Self.encoder.encode(body)
+        } else {
+            request.httpBody = Data("{}".utf8)
+        }
         let (data, response) = try await session.data(for: request)
         try Self.verify(response)
         return try Self.decoder.decode(T.self, from: data)
@@ -167,7 +210,6 @@ struct BackendClient {
 }
 
 private extension JSONDecoder.DateDecodingStrategy {
-    /// ISO-8601 with optional fractional seconds and timezones as emitted by FastAPI.
     static var iso8601WithFractional: JSONDecoder.DateDecodingStrategy {
         .custom { decoder in
             let string = try decoder.singleValueContainer().decode(String.self)

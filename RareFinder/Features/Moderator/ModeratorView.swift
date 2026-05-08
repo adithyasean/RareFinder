@@ -4,6 +4,8 @@ import SwiftData
 struct ModeratorView: View {
     @Query(sort: [SortDescriptor(\ModerationFlag.createdAt, order: .reverse)]) private var flags: [ModerationFlag]
     @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
+    @State private var actionError: String?
 
     private let statsColumns = [GridItem(.adaptive(minimum: 180), spacing: RFSpacing.md)]
 
@@ -29,14 +31,26 @@ struct ModeratorView: View {
                             .background(RFColor.onSurface, in: Capsule())
                     }
 
+                    if let actionError {
+                        Text(actionError)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(RFColor.tertiary)
+                            .padding(RFSpacing.md)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(RFColor.tertiary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                    }
+
                     ForEach(flags) { flag in
                         FlagCard(flag: flag) { action in
-                            apply(action, to: flag)
+                            Task { await apply(action, to: flag) }
                         }
                     }
                 }
             }
             .padding(RFSpacing.lg)
+        }
+        .refreshable {
+            await appState.sync.syncAll(context: context)
         }
         .background(RFColor.surface)
         .navigationTitle("Moderator")
@@ -45,12 +59,20 @@ struct ModeratorView: View {
         #endif
     }
 
-    private func apply(_ action: ModerationAction, to flag: ModerationFlag) {
+    @MainActor
+    private func apply(_ action: ModerationAction, to flag: ModerationFlag) async {
+        let verb: String
         switch action {
-        case .quarantine: flag.status = .quarantined
-        case .action: flag.status = .actioned
+        case .quarantine: verb = "quarantine"
+        case .action: verb = "action"
         }
-        try? context.save()
+        do {
+            _ = try await appState.sync.client.moderationAction(flagID: flag.id, action: verb)
+            await appState.sync.syncAll(context: context)
+            actionError = nil
+        } catch {
+            actionError = "Backend rejected \(verb): \(error.localizedDescription)"
+        }
     }
 }
 

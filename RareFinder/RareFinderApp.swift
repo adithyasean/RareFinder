@@ -52,6 +52,7 @@ struct RareFinderApp: App {
 
 private struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(AppState.self) private var appState
 
     var body: some View {
@@ -64,9 +65,13 @@ private struct RootView: View {
         }
         .task {
             await appState.sync.syncAll(context: context)
-            appState.bootstrap(context: context)
             if let bounties = try? context.fetch(FetchDescriptor<Bounty>()) {
                 appState.location.monitorAll(bounties: bounties)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await appState.sync.syncAll(context: context) }
             }
         }
     }
