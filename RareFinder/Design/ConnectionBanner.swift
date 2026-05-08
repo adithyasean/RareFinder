@@ -70,23 +70,12 @@ struct ConnectionBanner: View {
         case .offline(let reason):
             return .visible(
                 symbol: "wifi.exclamationmark",
-                title: "Backend offline",
+                title: "Offline",
                 detail: reason.isEmpty ? "Tap retry to reconnect." : reason,
                 tint: RFColor.tertiary,
                 showsRetry: true
             )
-        case .online(let at):
-            // Stay visible briefly so the user gets confirmation the
-            // backend is live; otherwise hide to keep the UI clean.
-            if Date.now.timeIntervalSince(at) < 4 {
-                return .visible(
-                    symbol: "checkmark.seal.fill",
-                    title: "Backend live",
-                    detail: "Synced \(at.rf_relative)",
-                    tint: RFColor.secondary,
-                    showsRetry: false
-                )
-            }
+        case .online(_):
             return .hidden
         }
     }
