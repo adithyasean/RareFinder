@@ -117,8 +117,9 @@ private struct BountyPreviewCard: View {
                         .background(RFColor.surfaceContainer)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } else {
-                        HeroIconArt(symbol: bounty.symbol, palette: [bounty.status.tint], iconSize: 32)
+                        IconBadge(symbol: bounty.symbol, tint: bounty.status.tint, size: 40)
                             .frame(width: 80, height: 80)
+                            .background(RFColor.surfaceContainer)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                 }

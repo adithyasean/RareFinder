@@ -396,20 +396,6 @@ struct CommentView: View {
                         .background(RFColor.surfaceContainer)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .padding(.top, 4)
-                    } else {
-                        // Fallback for reports without images
-                        HeroIconArt(symbol: report.symbol, palette: [RFColor.primary], iconSize: 24)
-                            .frame(maxWidth: .infinity)
-                            .aspectRatio(2.4, contentMode: .fill)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(
-                                Text("No photo attached to this intel")
-                                    .font(.rfBody(10))
-                                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
-                                    .padding(8),
-                                alignment: .bottomTrailing
-                            )
-                            .padding(.top, 4)
                     }
                 }
             }

@@ -184,6 +184,29 @@ struct BackendClient {
         try await post("/rewards/\(id.uuidString)/redeem", body: EmptyBody())
     }
 
+    func uploadImage(data: Data) async throws -> String {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: baseURL.appendingPathComponent("/storage/upload"))
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"image.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        
+        let (responseData, response) = try await session.data(for: request)
+        try Self.verify(response)
+        
+        struct UploadResponse: Decodable { let url: String }
+        let result = try Self.decoder.decode(UploadResponse.self, from: responseData)
+        return result.url
+    }
+
     /// `action` ∈ { "quarantine", "action", "dismiss" }.
     func moderationAction(flagID: UUID, action: String) async throws -> ModerationFlagDTO {
         try await post("/moderation/flags/\(flagID.uuidString)/\(action)", body: EmptyBody())

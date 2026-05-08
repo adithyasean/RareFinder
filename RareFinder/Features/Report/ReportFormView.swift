@@ -172,10 +172,17 @@ struct ReportFormView: View {
             ?? appState.location.currentLocation?.coordinate
             ?? CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
 
-        // Simulate image URL if a photo was attached
-        let simulatedImageURL: String? = selectedImage != nil 
-            ? "https://picsum.photos/seed/\(Int.random(in: 1...1000))/800/600" 
-            : nil
+        // Upload actual image to MinIO if one was attached
+        var remoteImageURL: String? = nil
+        if let image = selectedImage, let data = image.jpegData(compressionQuality: 0.7) {
+            do {
+                remoteImageURL = try await appState.sync.client.uploadImage(data: data)
+            } catch {
+                print("Image upload failed: \(error)")
+                // Continue with submission anyway, or handle error?
+                // For now, we'll continue but without the image if upload fails.
+            }
+        }
 
         let request = BackendClient.SubmitReportRequest(
             bounty_id: matchedBounty?.id,
@@ -189,7 +196,7 @@ struct ReportFormView: View {
             longitude: coord.longitude,
             symbol: category.symbol,
             is_geofence_verified: verified,
-            image_url: simulatedImageURL
+            image_url: remoteImageURL
         )
 
         do {
