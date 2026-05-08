@@ -94,6 +94,7 @@ final class SyncService {
                 local.downvotes = dto.downvotes
                 local.intelScore = dto.intel_score
                 local.symbol = dto.symbol
+                local.imageURL = dto.image_url
                 local.updatedAt = dto.updated_at
                 local.isRemote = true
             } else {
@@ -111,6 +112,7 @@ final class SyncService {
                     downvotes: dto.downvotes,
                     intelScore: dto.intel_score,
                     symbol: dto.symbol,
+                    imageURL: dto.image_url,
                     isRemote: true,
                     createdAt: dto.created_at,
                     updatedAt: dto.updated_at
@@ -127,8 +129,10 @@ final class SyncService {
         let reportIndex = Dictionary(uniqueKeysWithValues: existingReports.map { ($0.id, $0) })
         let bountyIndex = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<Bounty>()).map { ($0.id, $0) })
         let incomingIDs = Set(dtos.map(\.id))
+
         for dto in dtos {
             let bounty = dto.bounty_id.flatMap { bountyIndex[$0] }
+            let report: IntelReport
             if let local = reportIndex[dto.id] {
                 local.hunterName = dto.hunter_name
                 local.hunterSeed = dto.hunter_seed
@@ -141,10 +145,12 @@ final class SyncService {
                 local.downvotes = dto.downvotes
                 local.symbol = dto.symbol
                 local.pointsAwarded = dto.points_awarded
+                local.imageURL = dto.image_url
                 local.bounty = bounty
                 local.isRemote = true
+                report = local
             } else {
-                context.insert(IntelReport(
+                let newReport = IntelReport(
                     id: dto.id,
                     hunterName: dto.hunter_name,
                     hunterSeed: dto.hunter_seed,
@@ -156,13 +162,52 @@ final class SyncService {
                     downvotes: dto.downvotes,
                     symbol: dto.symbol,
                     pointsAwarded: dto.points_awarded,
+                    imageURL: dto.image_url,
                     isRemote: true,
                     createdAt: dto.created_at,
                     bounty: bounty
-                ))
+                )
+                context.insert(newReport)
+                report = newReport
+            }
+
+            if let replyDTOs = dto.replies {
+                try mergeReplies(replyDTOs, for: report, context: context)
             }
         }
         for stale in existingReports where stale.isRemote && !incomingIDs.contains(stale.id) {
+            context.delete(stale)
+        }
+    }
+
+    private func mergeReplies(_ dtos: [BackendClient.IntelReplyDTO], for report: IntelReport, context: ModelContext) throws {
+        let existingReplies = report.replies
+        let replyIndex = Dictionary(uniqueKeysWithValues: existingReplies.map { ($0.id, $0) })
+        let incomingIDs = Set(dtos.map(\.id))
+
+        for dto in dtos {
+            if let local = replyIndex[dto.id] {
+                local.hunterName = dto.hunter_name
+                local.hunterSeed = dto.hunter_seed
+                local.content = dto.content
+                local.isRemote = true
+                local.parentReplyID = dto.parent_reply_id
+            } else {
+                let newReply = IntelReply(
+                    id: dto.id,
+                    hunterName: dto.hunter_name,
+                    hunterSeed: dto.hunter_seed,
+                    content: dto.content,
+                    createdAt: dto.created_at,
+                    isRemote: true,
+                    report: report,
+                    parentReplyID: dto.parent_reply_id
+                )
+                context.insert(newReply)
+            }
+        }
+
+        for stale in existingReplies where stale.isRemote && !incomingIDs.contains(stale.id) {
             context.delete(stale)
         }
     }
@@ -297,5 +342,6 @@ final class SyncService {
         for rw in try context.fetch(FetchDescriptor<Reward>()) where !rw.isRemote { context.delete(rw) }
         for n in try context.fetch(FetchDescriptor<AppNotification>()) where !n.isRemote { context.delete(n) }
         for f in try context.fetch(FetchDescriptor<ModerationFlag>()) where !f.isRemote { context.delete(f) }
+        for ir in try context.fetch(FetchDescriptor<IntelReply>()) where !ir.isRemote { context.delete(ir) }
     }
 }

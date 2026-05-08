@@ -149,7 +149,8 @@ struct ReportFormView: View {
             latitude: coord.latitude,
             longitude: coord.longitude,
             symbol: category.symbol,
-            is_geofence_verified: verified
+            is_geofence_verified: verified,
+            image_url: photoAttached ? "https://picsum.photos/seed/\(UUID().uuidString)/800/600" : nil
         )
 
         do {

@@ -90,13 +90,29 @@ private struct BountyPreviewCard: View {
                         .tracking(1.4)
                         .foregroundStyle(.white.opacity(0.5))
                 }
-                Text(bounty.title)
-                    .font(.system(size: 20, weight: .black))
-                    .foregroundStyle(.white)
-                Text(bounty.summary)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(2)
+                HStack(alignment: .top, spacing: RFSpacing.md) {
+                    VStack(alignment: .leading, spacing: RFSpacing.sm) {
+                        Text(bounty.title)
+                            .font(.system(size: 20, weight: .black))
+                            .foregroundStyle(.white)
+                        Text(bounty.summary)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    if let imageURL = bounty.imageURL, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            RFColor.surfaceContainer
+                        }
+                        .frame(width: 80, height: 80)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                }
                 HStack {
                     Image(systemName: "scope")
                     Text("LAUNCH SCANNER")

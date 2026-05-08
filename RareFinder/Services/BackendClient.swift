@@ -28,8 +28,19 @@ struct BackendClient {
         let downvotes: Int
         let intel_score: Int
         let symbol: String
+        let image_url: String?
         let created_at: Date
         let updated_at: Date
+    }
+
+    struct IntelReplyDTO: Decodable {
+        let id: UUID
+        let report_id: UUID
+        let parent_reply_id: UUID?
+        let hunter_name: String
+        let hunter_seed: String
+        let content: String
+        let created_at: Date
     }
 
     struct IntelReportDTO: Decodable {
@@ -46,7 +57,9 @@ struct BackendClient {
         let downvotes: Int
         let symbol: String
         let points_awarded: Int
+        let image_url: String?
         let created_at: Date
+        let replies: [IntelReplyDTO]?
     }
 
     struct HunterDTO: Decodable {
@@ -103,6 +116,14 @@ struct BackendClient {
         let longitude: Double
         let symbol: String
         let is_geofence_verified: Bool
+        let image_url: String?
+    }
+
+    struct SubmitReplyRequest: Encodable {
+        let hunter_name: String
+        let hunter_seed: String?
+        let content: String
+        let parent_reply_id: UUID?
     }
 
     struct SubmitReportResponse: Decodable {
@@ -122,6 +143,7 @@ struct BackendClient {
         let longitude: Double
         let district: String
         let symbol: String
+        let image_url: String?
     }
 
     struct RedeemResponse: Decodable {
@@ -148,6 +170,10 @@ struct BackendClient {
 
     func submitReport(_ body: SubmitReportRequest) async throws -> SubmitReportResponse {
         try await post("/reports", body: body)
+    }
+
+    func submitReply(reportID: UUID, body: SubmitReplyRequest) async throws -> IntelReplyDTO {
+        try await post("/reports/\(reportID.uuidString)/replies", body: body)
     }
 
     func createBounty(_ body: CreateBountyRequest) async throws -> BountyDTO {

@@ -17,27 +17,44 @@ struct DetailView: View {
     private var verifyKey: String { "rf.verified.\(bounty.id.uuidString)" }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                hero
-                content
-                    .offset(y: -40)
-                    .padding(.horizontal, RFSpacing.md)
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    hero
+                    content
+                }
             }
+            .background(RFColor.surface)
+            .ignoresSafeArea(edges: .top)
+
+            navBar
         }
-        .background(RFColor.surface)
-        .navigationTitle(bounty.title)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
         .toolbar(.hidden, for: .navigationBar)
-        #endif
-        .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $showReportSheet) {
             ReportFormView(prefilledBounty: bounty)
         }
         .onAppear {
             isClaimed = UserDefaults.standard.bool(forKey: verifyKey)
         }
+    }
+
+    private var navBar: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+        .padding(.horizontal, RFSpacing.md)
+        .padding(.top, 54) // Handles notch/safe area
     }
 
     private var shareText: String {
@@ -66,136 +83,146 @@ struct DetailView: View {
     }
 
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [bounty.status.tint, RFColor.onSurface],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            Image(systemName: bounty.symbol)
-                .font(.system(size: 220, weight: .black))
-                .foregroundStyle(.white.opacity(0.12))
-                .offset(x: 60, y: -20)
-                .accessibilityHidden(true)
+        GeometryReader { geo in
+            ZStack(alignment: .bottomLeading) {
+                if let imageURL = bounty.imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(RFColor.surfaceContainer)
+                    }
+                    .frame(width: geo.size.width, height: 380)
+                    .clipped()
+                } else {
+                    LinearGradient(
+                        colors: [bounty.status.tint, RFColor.onSurface],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                    .frame(height: 380)
 
-            VStack(alignment: .leading, spacing: RFSpacing.sm) {
-                HStack(spacing: 8) {
-                    Tag(text: "Verified Rarity", tint: RFColor.secondary)
-                    Tag(text: bounty.category.rawValue, tint: .white.opacity(0.2))
+                    Image(systemName: bounty.symbol)
+                        .font(.system(size: 200, weight: .black))
+                        .foregroundStyle(.white.opacity(0.12))
+                        .offset(x: 80, y: 0)
                 }
-                Text(bounty.title)
-                    .font(.system(size: 38, weight: .black))
-                    .foregroundStyle(.white)
-                    .lineLimit(3)
-                Text(bounty.district.uppercased())
-                    .font(.system(size: 11, weight: .black))
-                    .tracking(2)
-                    .foregroundStyle(.white.opacity(0.7))
+
+                // Gradient overlay for text legibility
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.6)],
+                    startPoint: .top, endPoint: .bottom
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Tag(text: "LIVE INTEL", tint: RFColor.secondary)
+                        Tag(text: bounty.category.rawValue, tint: .white.opacity(0.3))
+                    }
+                    Text(bounty.title)
+                        .font(.rfTitle(30))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+
+                    Label(bounty.district.uppercased(), systemImage: "mappin.and.ellipse")
+                        .font(.system(size: 10, weight: .black))
+                        .tracking(1.5)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(RFSpacing.lg)
+                .padding(.bottom, 60) // Extra padding for content card overlap
             }
-            .padding(RFSpacing.lg)
-            .padding(.bottom, RFSpacing.lg)
-            .padding(.top, RFSpacing.xl + 24)
         }
-        .frame(height: 420)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 32, bottomTrailingRadius: 32, topTrailingRadius: 0))
-        .overlay(alignment: .topLeading) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 18, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 48)
-            .padding(.leading, RFSpacing.md)
-            .accessibilityLabel("Back")
-        }
+        .frame(height: 380)
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: RFSpacing.lg) {
+            // Overlapping Pill Header
             HStack {
                 HStack(spacing: RFSpacing.sm) {
-                    IconBadge(symbol: bounty.symbol, tint: RFColor.primary, size: 48)
-                    VStack(alignment: .leading, spacing: 2) {
+                    IconBadge(symbol: bounty.symbol, tint: RFColor.primary, size: 42)
+                    VStack(alignment: .leading, spacing: 0) {
                         Text("INTEL SCORE")
-                            .font(.system(size: 9, weight: .black))
-                            .tracking(1.5)
+                            .font(.system(size: 8, weight: .black))
+                            .tracking(1.2)
                             .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.5))
                         Text("#\(bounty.intelScore)")
-                            .font(.system(size: 22, weight: .black))
+                            .font(.system(size: 20, weight: .black))
                             .foregroundStyle(RFColor.onSurface)
                     }
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("HIGH FREQUENCY")
-                        .font(.system(size: 9, weight: .black))
-                        .tracking(1.5)
-                        .foregroundStyle(RFColor.secondary)
-                    Text("Verified \(bounty.updatedAt.rf_relative)")
-                        .font(.system(size: 10, weight: .black))
-                        .tracking(1)
-                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.5))
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("STATUS")
+                        .font(.system(size: 8, weight: .black))
+                        .tracking(1.2)
+                        .foregroundStyle(bounty.status.tint)
+                    Text(bounty.status.rawValue.uppercased())
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(RFColor.onSurface)
                 }
             }
             .padding(RFSpacing.md)
-            .rfCardStyle()
+            .background(RFColor.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
 
             VStack(alignment: .leading, spacing: RFSpacing.sm) {
                 Eyebrow(text: "Intelligence Digest")
                 Text(bounty.detail)
-                    .font(.rfBody(16))
-                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.85))
+                    .font(.rfBody(15))
+                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.8))
                     .lineSpacing(4)
             }
+            .padding(.top, 8)
 
             geofenceCallout
 
-            VStack(spacing: RFSpacing.sm) {
-                RFDarkButton(title: "Launch Scanner", icon: "scope") {
-                    launchScanner()
-                }
-                verifyButton
-                HStack(spacing: RFSpacing.sm) {
-                    RFSecondaryButton(title: "Add Intel", icon: "plus.circle.fill") {
-                        showReportSheet = true
-                    }
-                    ShareLink(item: shareText) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("DISPATCH")
-                                .font(.system(size: 11, weight: .black))
-                                .tracking(2.4)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .foregroundStyle(RFColor.onSurface)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(.background)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(RFColor.outlineVariant.opacity(0.4), lineWidth: 1)
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Dispatch — share this bounty")
-                }
+            observationsList
+
+            actionsSection
+        }
+        .padding(.horizontal, RFSpacing.md)
+        .padding(.top, 24)
+        .padding(.bottom, 40)
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 32, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 32)
+                .fill(RFColor.surface)
+        )
+        .offset(y: -30) // Subtle overlap
+    }
+
+    private var actionsSection: some View {
+        VStack(spacing: RFSpacing.sm) {
+            RFDarkButton(title: "Launch Scanner", icon: "scope") {
+                launchScanner()
             }
-            if let toast = scannerToast {
-                Text(toast)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(RFColor.secondary)
-                    .padding(.top, 4)
-                    .transition(.opacity)
+            verifyButton
+            HStack(spacing: RFSpacing.sm) {
+                RFSecondaryButton(title: "Add Intel", icon: "plus.circle.fill") {
+                    showReportSheet = true
+                }
+                ShareLink(item: shareText) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("DISPATCH")
+                            .font(.system(size: 10, weight: .black))
+                            .tracking(2)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .foregroundStyle(RFColor.onSurface)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(.background)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(RFColor.outlineVariant.opacity(0.4), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(RFSpacing.lg)
-        .rfElevatedCard(cornerRadius: 36)
-        .padding(.top, 16)
     }
 
     @ViewBuilder
@@ -259,7 +286,8 @@ struct DetailView: View {
             latitude: bounty.latitude,
             longitude: bounty.longitude,
             symbol: "checkmark.shield.fill",
-            is_geofence_verified: true
+            is_geofence_verified: true,
+            image_url: nil
         )
 
         do {
@@ -295,5 +323,316 @@ struct DetailView: View {
         }
         .padding(RFSpacing.md)
         .background(RFColor.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var observationsList: some View {
+        VStack(alignment: .leading, spacing: RFSpacing.lg) {
+            Eyebrow(text: "Field Intel (\(bounty.reports.count))")
+                .padding(.top, 8)
+
+            if bounty.reports.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 20))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.3))
+                    Text("No field observations yet. Be the first to report intel.")
+                        .font(.rfBody(14))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.5))
+                }
+                .padding(.vertical, 12)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(bounty.reports.sorted(by: { $0.createdAt > $1.createdAt })) { report in
+                        CommentView(report: report)
+                        if report.id != bounty.reports.sorted(by: { $0.createdAt > $1.createdAt }).last?.id {
+                            Divider()
+                                .padding(.vertical, 12)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+struct CommentView: View {
+    let report: IntelReport
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
+    @Query private var profiles: [HunterProfile]
+    @State private var replyText = ""
+    @State private var showReplyField = false
+    @State private var isSubmitting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                AvatarView(seed: report.hunterSeed, size: 36)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(report.hunterName)
+                            .font(.system(size: 14, weight: .black))
+                            .foregroundStyle(RFColor.onSurface)
+                        Text("• \(report.createdAt.rf_relative)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                    }
+                    Text(report.note)
+                        .font(.rfBody(15))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.9))
+                        .lineSpacing(2)
+
+                    if let imageURL = report.imageURL, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { image in
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(RFColor.surfaceContainer)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .padding(.top, 4)
+                    }
+                }
+            }
+
+            HStack(spacing: 16) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showReplyField.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrowshape.turn.up.left.fill")
+                            .font(.system(size: 10, weight: .black))
+                        Text("REPLY")
+                            .font(.system(size: 10, weight: .black))
+                            .tracking(1.5)
+                    }
+                    .foregroundStyle(RFColor.primary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, 48)
+
+            if showReplyField {
+                replyField
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.leading, 48)
+            }
+
+            if !report.replies.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(report.replies.sorted(by: { $0.createdAt < $1.createdAt })) { reply in
+                        ReplyView(reply: reply, report: report)
+                    }
+                }
+                .padding(.leading, 48)
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var replyField: some View {
+        HStack(spacing: 8) {
+            TextField("Add intel reply...", text: $replyText)
+                .font(.rfBody(14))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(RFColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(RFColor.outlineVariant.opacity(0.5), lineWidth: 1)
+                )
+
+            if isSubmitting {
+                ProgressView()
+                    .frame(width: 40, height: 40)
+            } else {
+                Button {
+                    submitReply()
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(replyText.isEmpty ? RFColor.onSurfaceVariant.opacity(0.1) : RFColor.primary)
+                        )
+                }
+                .disabled(replyText.isEmpty)
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func submitReply() {
+        guard !replyText.isEmpty else { return }
+        isSubmitting = true
+
+        let profile = profiles.first
+        let request = BackendClient.SubmitReplyRequest(
+            hunter_name: profile?.displayName ?? "Guest Hunter",
+            hunter_seed: profile?.avatarSeed,
+            content: replyText,
+            parent_reply_id: nil
+        )
+
+        Task {
+            do {
+                let dto = try await appState.sync.client.submitReply(reportID: report.id, body: request)
+                let newReply = IntelReply(
+                    id: dto.id,
+                    hunterName: dto.hunter_name,
+                    hunterSeed: dto.hunter_seed,
+                    content: dto.content,
+                    createdAt: dto.created_at,
+                    isRemote: true,
+                    report: report,
+                    parentReplyID: nil
+                )
+                context.insert(newReply)
+                try context.save()
+
+                await MainActor.run {
+                    withAnimation {
+                        replyText = ""
+                        showReplyField = false
+                        isSubmitting = false
+                    }
+                }
+            } catch {
+                await MainActor.run { isSubmitting = false }
+            }
+        }
+    }
+}
+
+struct ReplyView: View {
+    let reply: IntelReply
+    let report: IntelReport
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
+    @Query private var profiles: [HunterProfile]
+    @State private var replyText = ""
+    @State private var showReplyField = false
+    @State private var isSubmitting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                AvatarView(seed: reply.hunterSeed, size: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(reply.hunterName)
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundStyle(RFColor.onSurface)
+                        Text("• \(reply.createdAt.rf_relative)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                    }
+                    Text(reply.content)
+                        .font(.rfBody(14))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.85))
+                }
+            }
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    showReplyField.toggle()
+                }
+            } label: {
+                Text("REPLY")
+                    .font(.system(size: 9, weight: .black))
+                    .tracking(1.2)
+                    .foregroundStyle(RFColor.primary)
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 38)
+
+            if showReplyField {
+                HStack(spacing: 8) {
+                    TextField("Reply to \(reply.hunterName)...", text: $replyText)
+                        .font(.rfBody(13))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(RFColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(RFColor.outlineVariant.opacity(0.5), lineWidth: 1)
+                        )
+
+                    if isSubmitting {
+                        ProgressView()
+                            .frame(width: 32, height: 32)
+                    } else {
+                        Button {
+                            submitReply()
+                        } label: {
+                            Image(systemName: "paperplane.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(replyText.isEmpty ? RFColor.onSurfaceVariant.opacity(0.1) : RFColor.primary)
+                                )
+                        }
+                        .disabled(replyText.isEmpty)
+                        .buttonStyle(.plain)
+                    }
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.leading, 38)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func submitReply() {
+        guard !replyText.isEmpty else { return }
+        isSubmitting = true
+
+        let profile = profiles.first
+        let request = BackendClient.SubmitReplyRequest(
+            hunter_name: profile?.displayName ?? "Guest Hunter",
+            hunter_seed: profile?.avatarSeed,
+            content: replyText,
+            parent_reply_id: reply.id
+        )
+
+        Task {
+            do {
+                let dto = try await appState.sync.client.submitReply(reportID: report.id, body: request)
+                let newReply = IntelReply(
+                    id: dto.id,
+                    hunterName: dto.hunter_name,
+                    hunterSeed: dto.hunter_seed,
+                    content: dto.content,
+                    createdAt: dto.created_at,
+                    isRemote: true,
+                    report: report,
+                    parentReplyID: reply.id
+                )
+                context.insert(newReply)
+                try context.save()
+
+                await MainActor.run {
+                    withAnimation {
+                        replyText = ""
+                        showReplyField = false
+                        isSubmitting = false
+                    }
+                }
+            } catch {
+                await MainActor.run { isSubmitting = false }
+            }
+        }
     }
 }

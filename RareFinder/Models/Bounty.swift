@@ -20,6 +20,7 @@ final class Bounty {
     var createdAt: Date
     var updatedAt: Date
     var symbol: String
+    var imageURL: String?
     var isRemote: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \IntelReport.bounty) var reports: [IntelReport] = []
 
@@ -37,6 +38,7 @@ final class Bounty {
         downvotes: Int = 0,
         intelScore: Int = 1000,
         symbol: String? = nil,
+        imageURL: String? = nil,
         isRemote: Bool = false,
         createdAt: Date = .now,
         updatedAt: Date = .now
@@ -55,6 +57,7 @@ final class Bounty {
         self.downvotes = downvotes
         self.intelScore = intelScore
         self.symbol = symbol ?? category.symbol
+        self.imageURL = imageURL
         self.isRemote = isRemote
         self.createdAt = createdAt
         self.updatedAt = updatedAt
