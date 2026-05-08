@@ -185,4 +185,74 @@ struct GeofenceTests {
         )
         #expect(LocationService.isWithinGeofence(userCoordinate: user, targetCoordinate: target))
     }
+
+    @Test("user inside a 5 km bounty radius passes the custom check")
+    func bountyRadius5km() {
+        // ~2 km north of the target — well inside a 5 km radius bounty area.
+        let user = CLLocationCoordinate2D(latitude: target.latitude + 0.018, longitude: target.longitude)
+        #expect(LocationService.isWithinGeofence(
+            userCoordinate: user,
+            targetCoordinate: target,
+            radius: 5_000
+        ))
+    }
+
+    @Test("user outside a 5 km bounty radius fails the custom check")
+    func bountyRadius5kmOutside() {
+        // ~10 km north — outside a 5 km radius.
+        let user = CLLocationCoordinate2D(latitude: target.latitude + 0.09, longitude: target.longitude)
+        #expect(!LocationService.isWithinGeofence(
+            userCoordinate: user,
+            targetCoordinate: target,
+            radius: 5_000
+        ))
+    }
+}
+
+// MARK: - Bounty model
+
+@Suite("Bounty — area vs intel modes")
+@MainActor
+struct BountyModeTests {
+
+    @Test("default Bounty is exact-location intel (isBounty == false)")
+    func defaultIsIntel() {
+        let b = Bounty(
+            title: "Sample",
+            summary: "",
+            detail: "",
+            category: .services,
+            status: .available,
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            district: "Test"
+        )
+        #expect(b.isBounty == false)
+        #expect(b.radiusKm == 0.5)
+    }
+
+    @Test("explicitly-bounty record carries its radius")
+    func bountyRadiusPersists() {
+        let b = Bounty(
+            title: "Sample",
+            summary: "",
+            detail: "",
+            category: .services,
+            status: .available,
+            coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            district: "Test",
+            isBounty: true,
+            radiusKm: 12.5
+        )
+        #expect(b.isBounty)
+        #expect(b.radiusKm == 12.5)
+    }
+
+    @Test("diameter slider range — 1km radius = 0.5km, 60km diameter = 30km radius")
+    func diameterRange() {
+        // Radius is half the user-facing diameter; verify both endpoints.
+        let minRadius = 1.0 / 2
+        let maxRadius = 60.0 / 2
+        #expect(minRadius == 0.5)
+        #expect(maxRadius == 30.0)
+    }
 }

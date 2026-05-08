@@ -96,6 +96,11 @@ final class SyncService {
                 local.symbol = dto.symbol
                 local.imageURL = dto.image_url
                 local.updatedAt = dto.updated_at
+                // Only overwrite isBounty/radiusKm if the backend supplied
+                // them — old backends without the columns send nil and we
+                // want to preserve any locally-stamped values in that case.
+                if let isBounty = dto.is_bounty { local.isBounty = isBounty }
+                if let radiusKm = dto.radius_km { local.radiusKm = radiusKm }
                 local.isRemote = true
             } else {
                 context.insert(Bounty(
@@ -114,6 +119,8 @@ final class SyncService {
                     symbol: dto.symbol,
                     imageURL: dto.image_url,
                     isRemote: true,
+                    isBounty: dto.is_bounty ?? false,
+                    radiusKm: dto.radius_km ?? 0.5,
                     createdAt: dto.created_at,
                     updatedAt: dto.updated_at
                 ))

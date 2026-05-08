@@ -31,6 +31,10 @@ struct BackendClient {
         let image_url: String?
         let created_at: Date
         let updated_at: Date
+        // Defaults keep the DTO backward-compatible if a backend predates the
+        // is_bounty / radius_km columns.
+        let is_bounty: Bool?
+        let radius_km: Double?
     }
 
     struct IntelReplyDTO: Decodable {
@@ -144,6 +148,8 @@ struct BackendClient {
         let district: String
         let symbol: String
         let image_url: String?
+        let is_bounty: Bool
+        let radius_km: Double
     }
 
     struct RedeemResponse: Decodable {

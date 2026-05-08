@@ -151,19 +151,42 @@ final class RareFinderUITests: XCTestCase {
     }
 
     @MainActor
-    func test_report_tab_presents_modal_sheet() throws {
+    func test_create_tab_presents_segmented_modal_sheet() throws {
         let app = launchAppOnTabs()
         waitFor(app.navigationBars["Rare Finder"], 8)
 
-        app.tabBars.buttons["Report"].tap()
+        app.tabBars.buttons["Create"].tap()
 
-        // Sheet has "Submit Intel" navigation title and a Cancel button.
-        waitFor(app.navigationBars["Submit Intel"], 8)
+        // Sheet has "Create" navigation title and a Cancel button. The
+        // segmented picker exposes both "Intel" and "Bounty" segments.
+        waitFor(app.navigationBars["Create"], 8)
         XCTAssertTrue(app.buttons["Cancel"].exists)
+        XCTAssertTrue(app.buttons["Intel"].exists, "Expected Intel segment in Create modal")
+        XCTAssertTrue(app.buttons["Bounty"].exists, "Expected Bounty segment in Create modal")
 
         // Dismiss; we should land back on a main tab.
         app.buttons["Cancel"].tap()
-        XCTAssertFalse(app.navigationBars["Submit Intel"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.navigationBars["Create"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    func test_create_bounty_segment_shows_diameter_slider() throws {
+        let app = launchAppOnTabs()
+        waitFor(app.navigationBars["Rare Finder"], 8)
+
+        app.tabBars.buttons["Create"].tap()
+        waitFor(app.navigationBars["Create"], 6)
+
+        // Switch to Bounty segment.
+        app.buttons["Bounty"].tap()
+
+        // Slider for the search diameter should be exposed.
+        let slider = app.sliders.firstMatch
+        XCTAssertTrue(slider.waitForExistence(timeout: 4),
+                      "Expected diameter slider on the Bounty segment")
+        XCTAssertTrue(app.staticTexts["Search Area"].exists)
+
+        app.buttons["Cancel"].tap()
     }
 
     // MARK: - Radar
@@ -289,8 +312,8 @@ final class RareFinderUITests: XCTestCase {
     func test_report_submit_button_disabled_when_note_empty() throws {
         let app = launchAppOnTabs()
         waitFor(app.navigationBars["Rare Finder"], 8)
-        app.tabBars.buttons["Report"].tap()
-        waitFor(app.navigationBars["Submit Intel"], 6)
+        app.tabBars.buttons["Create"].tap()
+        waitFor(app.navigationBars["Create"], 6)
 
         let submit = app.buttons["Transmit Intelligence"]
         waitFor(submit, 4)
@@ -302,8 +325,8 @@ final class RareFinderUITests: XCTestCase {
         let app = launchAppOnTabs()
         _ = installPermissionDismisser()
         waitFor(app.navigationBars["Rare Finder"], 8)
-        app.tabBars.buttons["Report"].tap()
-        waitFor(app.navigationBars["Submit Intel"], 6)
+        app.tabBars.buttons["Create"].tap()
+        waitFor(app.navigationBars["Create"], 6)
 
         // Find the multi-line observation TextField and type into it.
         let note = app.textFields["Describe what you observed…"]

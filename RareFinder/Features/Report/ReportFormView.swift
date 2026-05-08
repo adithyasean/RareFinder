@@ -11,6 +11,11 @@ struct ReportFormView: View {
     @Query private var profiles: [HunterProfile]
 
     let prefilledBounty: Bounty?
+    /// When `true`, the form renders without its own NavigationStack/toolbar
+    /// so it can be hosted inside CreateView's segmented container. The
+    /// standalone presentation (DetailView's "Add Intel" sheet) keeps its
+    /// chrome by using the default `false`.
+    let embedded: Bool
 
     @State private var category: BountyCategory = .fuelGrid
     @State private var status: BountyStatus = .available
@@ -22,18 +27,37 @@ struct ReportFormView: View {
     @State private var awardedPoints = 0
     @State private var submitting = false
     @State private var errorMessage: String?
-    
+
+    // Location source — defaults to GPS; switching to .pinned opens a map picker.
+    enum LocationSource: String, CaseIterable, Identifiable {
+        case currentGPS, pinned
+        var id: String { rawValue }
+        var label: String { self == .currentGPS ? "Current GPS" : "Pin From Map" }
+    }
+    @State private var locationSource: LocationSource = .currentGPS
+    @State private var pinnedCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
+    @State private var showPinPicker = false
+
     // Image selection state
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
 
-    init(prefilledBounty: Bounty? = nil) {
+    init(prefilledBounty: Bounty? = nil, embedded: Bool = false) {
         self.prefilledBounty = prefilledBounty
+        self.embedded = embedded
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
+        if embedded {
+            formContent
+        } else {
+            NavigationStack { formContent }
+        }
+    }
+
+    @ViewBuilder
+    private var formContent: some View {
+        Form {
                 Section {
                     Picker("Asset Category", selection: $category) {
                         ForEach(BountyCategory.allCases) { cat in
@@ -69,10 +93,31 @@ struct ReportFormView: View {
                 }
 
                 Section {
-                    Toggle(isOn: $locationSet) {
-                        Label("Pin Location (geofence anchor)", systemImage: "location.viewfinder")
+                    Picker("Location Source", selection: $locationSource) {
+                        ForEach(LocationSource.allCases) { src in
+                            Text(src.label).tag(src)
+                        }
                     }
-                    
+                    .pickerStyle(.segmented)
+
+                    if locationSource == .pinned {
+                        Button {
+                            if let here = appState.location.currentLocation?.coordinate {
+                                pinnedCoordinate = here
+                            }
+                            showPinPicker = true
+                        } label: {
+                            Label(
+                                String(format: "Pinned: %.4f, %.4f", pinnedCoordinate.latitude, pinnedCoordinate.longitude),
+                                systemImage: "mappin.and.ellipse"
+                            )
+                        }
+                    }
+
+                    Toggle(isOn: $locationSet) {
+                        Label("Mark as on-site (geofence anchor)", systemImage: "location.viewfinder")
+                    }
+
                     PhotosPicker(selection: $selectedItem, matching: .images) {
                         Label(selectedImage == nil ? "Attach Proof Photo" : "Change Photo", systemImage: "camera.fill")
                     }
@@ -133,29 +178,23 @@ struct ReportFormView: View {
                     .disabled(note.isEmpty || submitting)
                     .accessibilityHint(note.isEmpty ? "Add an observation note to enable submission" : "")
                 }
+        }
+        .modifier(StandaloneChrome(embedded: embedded, dismiss: dismiss))
+        .onAppear {
+            if let b = prefilledBounty, matchedBounty == nil {
+                matchedBounty = b
+                category = b.category
+                status = b.status
             }
-            .navigationTitle("Submit Intel")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+        }
+        .fullScreenCoverCompat(isPresented: $showSuccess) {
+            SuccessView(pointsAwarded: awardedPoints) {
+                showSuccess = false
+                dismiss()
             }
-            .onAppear {
-                if let b = prefilledBounty, matchedBounty == nil {
-                    matchedBounty = b
-                    category = b.category
-                    status = b.status
-                }
-            }
-            .fullScreenCoverCompat(isPresented: $showSuccess) {
-                SuccessView(pointsAwarded: awardedPoints) {
-                    showSuccess = false
-                    dismiss()
-                }
-            }
+        }
+        .sheet(isPresented: $showPinPicker) {
+            MapPinPicker(coordinate: $pinnedCoordinate)
         }
     }
 
@@ -168,9 +207,15 @@ struct ReportFormView: View {
         let profile = profiles.first
         let verified = verifyGeofence() || locationSet
 
-        let coord = matchedBounty?.coordinate
-            ?? appState.location.currentLocation?.coordinate
-            ?? CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
+        let coord: CLLocationCoordinate2D
+        switch locationSource {
+        case .pinned:
+            coord = pinnedCoordinate
+        case .currentGPS:
+            coord = matchedBounty?.coordinate
+                ?? appState.location.currentLocation?.coordinate
+                ?? CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
+        }
 
         // Upload actual image to MinIO if one was attached
         var remoteImageURL: String? = nil
@@ -235,5 +280,30 @@ private extension View {
         #else
         self.sheet(isPresented: isPresented, content: content)
         #endif
+    }
+}
+
+/// Applies the "Submit Intel" navigation title + Cancel toolbar when the form
+/// is shown on its own (DetailView's "Add Intel" sheet). When hosted inside
+/// CreateView's segmented container we suppress that chrome — CreateView
+/// supplies the title and Cancel button itself.
+private struct StandaloneChrome: ViewModifier {
+    let embedded: Bool
+    let dismiss: DismissAction
+    func body(content: Content) -> some View {
+        if embedded {
+            content
+        } else {
+            content
+                .navigationTitle("Submit Intel")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+        }
     }
 }
