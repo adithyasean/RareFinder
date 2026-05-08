@@ -108,6 +108,15 @@ struct BackendClient {
         let created_at: Date
     }
 
+    struct ModerationStatsDTO: Decodable {
+        let intel_total: Int
+        let bounty_total: Int
+        let hunter_total: Int
+        let pending_flags: Int
+        let quarantined_flags: Int
+        let actioned_flags: Int
+    }
+
     struct SubmitReportRequest: Encodable {
         let bounty_id: UUID?
         let bounty_title: String?
@@ -173,6 +182,8 @@ struct BackendClient {
     func fetchRewards() async throws -> [RewardDTO] { try await get("/rewards") }
     func fetchNotifications() async throws -> [NotificationDTO] { try await get("/notifications") }
     func fetchFlags() async throws -> [ModerationFlagDTO] { try await get("/moderation/flags") }
+    func fetchLeaderboard() async throws -> [HunterDTO] { try await get("/hunters/leaderboard") }
+    func fetchModerationStats() async throws -> ModerationStatsDTO { try await get("/moderation/stats") }
 
     func submitReport(_ body: SubmitReportRequest) async throws -> SubmitReportResponse {
         try await post("/reports", body: body)

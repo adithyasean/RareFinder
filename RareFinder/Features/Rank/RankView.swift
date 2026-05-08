@@ -16,6 +16,7 @@ struct RankView: View {
                         header(profile: profile)
                         xpEngine(profile: profile)
                         stats(profile: profile)
+                        quickLinks(profile: profile)
                     }
                     recent
                 }
@@ -39,6 +40,13 @@ struct RankView: View {
                         Label("Rewards", systemImage: "gift.fill")
                     }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    NavigationLink {
+                        LeaderboardView()
+                    } label: {
+                        Label("Leaderboard", systemImage: "trophy.fill")
+                    }
+                }
                 if profile?.isModerator == true {
                     ToolbarItem(placement: .secondaryAction) {
                         NavigationLink {
@@ -48,6 +56,48 @@ struct RankView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private func quickLinks(profile: HunterProfile) -> some View {
+        VStack(spacing: RFSpacing.sm) {
+            NavigationLink {
+                LeaderboardView()
+            } label: {
+                QuickLinkRow(
+                    icon: "trophy.fill",
+                    title: "Global Leaderboard",
+                    subtitle: "Rank #\(profile.rank) on the verification grid",
+                    tint: RFColor.primary
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                RewardsStoreView()
+            } label: {
+                QuickLinkRow(
+                    icon: "gift.fill",
+                    title: "Rewards Store",
+                    subtitle: "Spend XP on supply drops & boosts",
+                    tint: RFColor.secondary
+                )
+            }
+            .buttonStyle(.plain)
+
+            if profile.isModerator {
+                NavigationLink {
+                    ModeratorView()
+                } label: {
+                    QuickLinkRow(
+                        icon: "checkmark.shield.fill",
+                        title: "Moderator Console",
+                        subtitle: "Review flagged nodes & grid anomalies",
+                        tint: RFColor.tertiary
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -153,6 +203,33 @@ struct RankView: View {
                 .rfCardStyle(cornerRadius: 18)
             }
         }
+    }
+}
+
+private struct QuickLinkRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let tint: Color
+    var body: some View {
+        HStack(spacing: RFSpacing.md) {
+            IconBadge(symbol: icon, tint: tint, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundStyle(RFColor.onSurface)
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .black))
+                .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+        }
+        .padding(RFSpacing.md)
+        .rfCardStyle(cornerRadius: 18)
     }
 }
 
