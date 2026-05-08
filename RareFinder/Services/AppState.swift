@@ -36,10 +36,4 @@ final class AppState {
         hasCompletedOnboarding = false
         UserDefaults.standard.set(false, forKey: onboardingKey)
     }
-
-    /// Seeds a full offline demo corpus when the SwiftData store is empty.
-    /// Delegates to SeedData, which is idempotent and covers all model types.
-    func bootstrap(context: ModelContext) {
-        SeedData.bootstrapIfNeeded(context: context)
-    }
 }

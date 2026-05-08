@@ -250,6 +250,7 @@ struct DetailView: View {
 
         let request = BackendClient.SubmitReportRequest(
             bounty_id: bounty.id,
+            bounty_title: nil,
             hunter_name: profile?.displayName ?? "Guest Hunter",
             hunter_seed: profile?.avatarSeed,
             note: "Geofence verified — proof of presence within 50 m.",

@@ -93,6 +93,7 @@ struct BackendClient {
 
     struct SubmitReportRequest: Encodable {
         let bounty_id: UUID?
+        let bounty_title: String?
         let hunter_name: String
         let hunter_seed: String?
         let note: String

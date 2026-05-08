@@ -13,6 +13,7 @@ struct ReportFormView: View {
 
     @State private var category: BountyCategory = .fuelGrid
     @State private var status: BountyStatus = .available
+    @State private var bountyTitle: String = ""
     @State private var note: String = ""
     @State private var locationSet = false
     @State private var photoAttached = false
@@ -48,6 +49,9 @@ struct ReportFormView: View {
                             }
                         }
                         .pickerStyle(.navigationLink)
+                    }
+                    if matchedBounty == nil {
+                        TextField("Bounty Name", text: $bountyTitle)
                     }
                 } header: {
                     Text("Intel Classification")
@@ -136,6 +140,7 @@ struct ReportFormView: View {
 
         let request = BackendClient.SubmitReportRequest(
             bounty_id: matchedBounty?.id,
+            bounty_title: matchedBounty == nil ? bountyTitle.isEmpty ? nil : bountyTitle : nil,
             hunter_name: profile?.displayName ?? "Guest Hunter",
             hunter_seed: profile?.avatarSeed,
             note: note,

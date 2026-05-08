@@ -40,11 +40,6 @@ struct RadarView: View {
                     }
                     .accessibilityLabel("Notifications")
                 }
-                ToolbarItem(placement: .secondaryAction) {
-                    NavigationLink(destination: CategoriesView()) {
-                        Label("Categories", systemImage: "square.grid.2x2.fill")
-                    }
-                }
             }
         }
     }
@@ -83,6 +78,10 @@ struct RadarView: View {
                         selectedCategory = selectedCategory == cat ? nil : cat
                     }
                 }
+                NavigationLink(destination: CategoriesView()) {
+                    ChipLabel(title: "More", isActive: false)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -111,18 +110,26 @@ struct CategoryChip: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .heavy))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .foregroundStyle(isActive ? .white : RFColor.onSurfaceVariant)
-                .background(
-                    Capsule().fill(isActive ? AnyShapeStyle(RFColor.primaryGradient) : AnyShapeStyle(Color.white))
-                )
-                .overlay(Capsule().stroke(isActive ? RFColor.primary : RFColor.outlineVariant.opacity(0.3), lineWidth: 1))
+            ChipLabel(title: title, isActive: isActive)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+}
+
+struct ChipLabel: View {
+    let title: String
+    let isActive: Bool
+    var body: some View {
+        Text(title)
+            .font(.system(size: 13, weight: .heavy))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .foregroundStyle(isActive ? .white : RFColor.onSurfaceVariant)
+            .background(
+                Capsule().fill(isActive ? AnyShapeStyle(RFColor.primaryGradient) : AnyShapeStyle(Color.white))
+            )
+            .overlay(Capsule().stroke(isActive ? RFColor.primary : RFColor.outlineVariant.opacity(0.3), lineWidth: 1))
     }
 }
 
