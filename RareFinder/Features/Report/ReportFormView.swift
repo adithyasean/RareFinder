@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import CoreLocation
+import PhotosUI
 
 struct ReportFormView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,12 +17,15 @@ struct ReportFormView: View {
     @State private var bountyTitle: String = ""
     @State private var note: String = ""
     @State private var locationSet = false
-    @State private var photoAttached = false
     @State private var matchedBounty: Bounty?
     @State private var showSuccess = false
     @State private var awardedPoints = 0
     @State private var submitting = false
     @State private var errorMessage: String?
+    
+    // Image selection state
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
 
     init(prefilledBounty: Bounty? = nil) {
         self.prefilledBounty = prefilledBounty
@@ -68,8 +72,38 @@ struct ReportFormView: View {
                     Toggle(isOn: $locationSet) {
                         Label("Pin Location (geofence anchor)", systemImage: "location.viewfinder")
                     }
-                    Toggle(isOn: $photoAttached) {
-                        Label("Attach Proof Photo", systemImage: "camera.fill")
+                    
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Label(selectedImage == nil ? "Attach Proof Photo" : "Change Photo", systemImage: "camera.fill")
+                    }
+                    .onChange(of: selectedItem) { _, newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self),
+                               let image = UIImage(data: data) {
+                                selectedImage = image
+                            }
+                        }
+                    }
+                    
+                    if let selectedImage {
+                        Image(uiImage: selectedImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 150, maxHeight: 280)
+                            .background(RFColor.surfaceContainer)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(alignment: .topTrailing) {
+                                Button {
+                                    self.selectedImage = nil
+                                    self.selectedItem = nil
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white, .black.opacity(0.6))
+                                        .padding(8)
+                                }
+                            }
                     }
                 } header: {
                     Text("Verification")
@@ -138,6 +172,11 @@ struct ReportFormView: View {
             ?? appState.location.currentLocation?.coordinate
             ?? CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612)
 
+        // Simulate image URL if a photo was attached
+        let simulatedImageURL: String? = selectedImage != nil 
+            ? "https://picsum.photos/seed/\(Int.random(in: 1...1000))/800/600" 
+            : nil
+
         let request = BackendClient.SubmitReportRequest(
             bounty_id: matchedBounty?.id,
             bounty_title: matchedBounty == nil ? bountyTitle.isEmpty ? nil : bountyTitle : nil,
@@ -150,7 +189,7 @@ struct ReportFormView: View {
             longitude: coord.longitude,
             symbol: category.symbol,
             is_geofence_verified: verified,
-            image_url: photoAttached ? "https://picsum.photos/seed/\(UUID().uuidString)/800/600" : nil
+            image_url: simulatedImageURL
         )
 
         do {

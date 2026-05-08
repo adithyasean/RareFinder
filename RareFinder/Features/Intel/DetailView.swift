@@ -17,17 +17,19 @@ struct DetailView: View {
     private var verifyKey: String { "rf.verified.\(bounty.id.uuidString)" }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    hero
-                    content
+        GeometryReader { geo in
+            ZStack(alignment: .top) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        hero(geo: geo)
+                        content
+                    }
                 }
-            }
-            .background(RFColor.surface)
-            .ignoresSafeArea(edges: .top)
+                .background(RFColor.surface)
+                .ignoresSafeArea(edges: .top)
 
-            navBar
+                navBar(geo: geo)
+            }
         }
         .navigationTitle("")
         .toolbar(.hidden, for: .navigationBar)
@@ -39,7 +41,7 @@ struct DetailView: View {
         }
     }
 
-    private var navBar: some View {
+    private func navBar(geo: GeometryProxy) -> some View {
         HStack {
             Button {
                 dismiss()
@@ -54,7 +56,7 @@ struct DetailView: View {
             Spacer()
         }
         .padding(.horizontal, RFSpacing.md)
-        .padding(.top, 54) // Handles notch/safe area
+        .padding(.top, max(geo.safeAreaInsets.top, 12)) 
     }
 
     private var shareText: String {
@@ -82,58 +84,52 @@ struct DetailView: View {
         }
     }
 
-    private var hero: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .bottomLeading) {
-                if let imageURL = bounty.imageURL, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle().fill(RFColor.surfaceContainer)
-                    }
-                    .frame(width: geo.size.width, height: 380)
+    private func hero(geo: GeometryProxy) -> some View {
+        let heroHeight = geo.size.width * 0.62 // Approx 16:10 for a wide hero
+        
+        return ZStack(alignment: .bottomLeading) {
+            if let imageURL = bounty.imageURL, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(RFColor.surfaceContainer)
+                }
+                .frame(width: geo.size.width, height: heroHeight)
+                .clipped()
+            } else {
+                HeroIconArt(symbol: bounty.symbol, palette: [bounty.status.tint, RFColor.onSurface], iconSize: 180)
+                    .frame(width: geo.size.width, height: heroHeight)
                     .clipped()
-                } else {
-                    LinearGradient(
-                        colors: [bounty.status.tint, RFColor.onSurface],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                    .frame(height: 380)
-
-                    Image(systemName: bounty.symbol)
-                        .font(.system(size: 200, weight: .black))
-                        .foregroundStyle(.white.opacity(0.12))
-                        .offset(x: 80, y: 0)
-                }
-
-                // Gradient overlay for text legibility
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.6)],
-                    startPoint: .top, endPoint: .bottom
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Tag(text: "LIVE INTEL", tint: RFColor.secondary)
-                        Tag(text: bounty.category.rawValue, tint: .white.opacity(0.3))
-                    }
-                    Text(bounty.title)
-                        .font(.rfTitle(30))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-
-                    Label(bounty.district.uppercased(), systemImage: "mappin.and.ellipse")
-                        .font(.system(size: 10, weight: .black))
-                        .tracking(1.5)
-                        .foregroundStyle(.white.opacity(0.8))
-                }
-                .padding(RFSpacing.lg)
-                .padding(.bottom, 60) // Extra padding for content card overlap
             }
+
+            // Gradient overlay for text legibility
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.7)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: heroHeight * 0.5)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Tag(text: "LIVE INTEL", tint: RFColor.secondary)
+                    Tag(text: bounty.category.rawValue, tint: .white.opacity(0.3))
+                }
+                Text(bounty.title)
+                    .font(.rfTitle(30))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+
+                Label(bounty.district.uppercased(), systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 10, weight: .black))
+                    .tracking(1.5)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            .padding(RFSpacing.lg)
+            .padding(.bottom, 60) // Extra padding for content card overlap
         }
-        .frame(height: 380)
+        .frame(height: heroHeight)
     }
 
     private var content: some View {
@@ -189,7 +185,7 @@ struct DetailView: View {
             UnevenRoundedRectangle(topLeadingRadius: 32, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 32)
                 .fill(RFColor.surface)
         )
-        .offset(y: -30) // Subtle overlap
+        .padding(.top, -30) // Subtle overlap
     }
 
     private var actionsSection: some View {
@@ -374,9 +370,13 @@ struct CommentView: View {
                         Text(report.hunterName)
                             .font(.system(size: 14, weight: .black))
                             .foregroundStyle(RFColor.onSurface)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                         Text("• \(report.createdAt.rf_relative)")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Text(report.note)
                         .font(.rfBody(15))
@@ -386,16 +386,30 @@ struct CommentView: View {
                     if let imageURL = report.imageURL, let url = URL(string: imageURL) {
                         AsyncImage(url: url) { image in
                             image.resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .aspectRatio(contentMode: .fit)
                         } placeholder: {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(RFColor.surfaceContainer)
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 180)
-                        .clipped()
+                        .frame(minHeight: 150, maxHeight: 280)
+                        .background(RFColor.surfaceContainer)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .padding(.top, 4)
+                    } else {
+                        // Fallback for reports without images
+                        HeroIconArt(symbol: report.symbol, palette: [RFColor.primary], iconSize: 24)
+                            .frame(maxWidth: .infinity)
+                            .aspectRatio(2.4, contentMode: .fill)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                Text("No photo attached to this intel")
+                                    .font(.rfBody(10))
+                                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                                    .padding(8),
+                                alignment: .bottomTrailing
+                            )
+                            .padding(.top, 4)
                     }
                 }
             }
@@ -533,9 +547,13 @@ struct ReplyView: View {
                         Text(reply.hunterName)
                             .font(.system(size: 13, weight: .black))
                             .foregroundStyle(RFColor.onSurface)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                         Text("• \(reply.createdAt.rf_relative)")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Text(reply.content)
                         .font(.rfBody(14))

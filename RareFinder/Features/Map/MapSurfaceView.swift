@@ -89,28 +89,37 @@ private struct BountyPreviewCard: View {
                         .font(.system(size: 10, weight: .black))
                         .tracking(1.4)
                         .foregroundStyle(.white.opacity(0.5))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 HStack(alignment: .top, spacing: RFSpacing.md) {
                     VStack(alignment: .leading, spacing: RFSpacing.sm) {
                         Text(bounty.title)
                             .font(.system(size: 20, weight: .black))
                             .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
                         Text(bounty.summary)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(2)
+                            .minimumScaleFactor(0.8)
                     }
                     Spacer()
                     if let imageURL = bounty.imageURL, let url = URL(string: imageURL) {
                         AsyncImage(url: url) { image in
                             image.resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .aspectRatio(contentMode: .fit)
                         } placeholder: {
                             RFColor.surfaceContainer
                         }
                         .frame(width: 80, height: 80)
-                        .clipped()
+                        .background(RFColor.surfaceContainer)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else {
+                        HeroIconArt(symbol: bounty.symbol, palette: [bounty.status.tint], iconSize: 32)
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                 }
                 HStack {

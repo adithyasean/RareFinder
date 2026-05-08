@@ -196,11 +196,13 @@ struct AvatarView: View {
 struct HeroIconArt: View {
     let symbol: String
     var palette: [Color] = [RFColor.primary, RFColor.primaryDeep]
+    var iconSize: CGFloat = 64
+    
     var body: some View {
         ZStack {
             LinearGradient(colors: palette.map { $0.opacity(0.15) }, startPoint: .topLeading, endPoint: .bottomTrailing)
             Image(systemName: symbol)
-                .font(.system(size: 64, weight: .black))
+                .font(.system(size: iconSize, weight: .black))
                 .foregroundStyle(LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing))
         }
         .accessibilityHidden(true)

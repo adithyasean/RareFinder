@@ -24,6 +24,7 @@ struct SuccessView: View {
                     Text("Intel Transmitted")
                         .font(.system(size: 34, weight: .black))
                         .foregroundStyle(RFColor.onSurface)
+                        .minimumScaleFactor(0.8)
                     Text("Your verification has been logged on the grid. Rare Finder trust scores are updating.")
                         .font(.rfBody())
                         .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.7))
