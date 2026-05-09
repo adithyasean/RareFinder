@@ -17,6 +17,8 @@ struct RareFinderApp: App {
         let args = ProcessInfo.processInfo.arguments
         if args.contains("-RFUITestsReset") {
             UserDefaults.standard.removeObject(forKey: "rf.onboardingComplete")
+            UserDefaults.standard.removeObject(forKey: "rf.authSession")
+            UserDefaults.standard.removeObject(forKey: "rf.authToken")
         }
         if args.contains("-RFUITestsSkipOnboarding") {
             UserDefaults.standard.set(true, forKey: "rf.onboardingComplete")
@@ -63,6 +65,7 @@ private struct RootView: View {
                 OnboardingFlow()
             }
         }
+        .rfAccessibilityOverrides()
         .task {
             await appState.sync.syncAll(context: context)
             if let bounties = try? context.fetch(FetchDescriptor<Bounty>()) {

@@ -5,6 +5,9 @@ struct RankView: View {
     @Query private var profiles: [HunterProfile]
     @Query(sort: [SortDescriptor(\IntelReport.createdAt, order: .reverse)]) private var reports: [IntelReport]
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
+    @State private var showLogoutConfirm = false
+    @State private var showAuthSheet = false
 
     var profile: HunterProfile? { profiles.first }
 
@@ -19,6 +22,7 @@ struct RankView: View {
                         quickLinks(profile: profile)
                     }
                     recent
+                    accountActions
                 }
                 .padding(RFSpacing.lg)
             }
@@ -58,6 +62,67 @@ struct RankView: View {
                 }
             }
         }
+    }
+
+    private var accountActions: some View {
+        VStack(spacing: RFSpacing.sm) {
+            if appState.auth.isAuthenticated {
+                Button(role: .destructive) {
+                    showLogoutConfirm = true
+                } label: {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Log Out")
+                            .font(.system(size: 13, weight: .black))
+                            .tracking(1.5)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .foregroundStyle(.red)
+                    .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("profile_logout")
+                .confirmationDialog("Log out of Rare Finder?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
+                    Button("Log Out", role: .destructive) {
+                        Task {
+                            await appState.auth.logout()
+                            await appState.sync.syncAll(context: context)
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
+            } else {
+                Button {
+                    showAuthSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "key.fill")
+                        Text("Log In Or Sign Up")
+                            .font(.system(size: 13, weight: .black))
+                            .tracking(1.5)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .foregroundStyle(.white)
+                    .background(RFColor.primaryGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("profile_login")
+                .sheet(isPresented: $showAuthSheet) {
+                    NavigationStack {
+                        AuthView {
+                            showAuthSheet = false
+                            Task { await appState.sync.syncAll(context: context) }
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close") { showAuthSheet = false }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.top, RFSpacing.sm)
     }
 
     private func quickLinks(profile: HunterProfile) -> some View {

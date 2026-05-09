@@ -56,6 +56,12 @@ struct RadarView: View {
                     }
                     .accessibilityLabel("Notifications")
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    NavigationLink(destination: CategoriesView()) {
+                        Label("Categories", systemImage: "square.grid.2x2.fill")
+                    }
+                    .accessibilityLabel("Categories")
+                }
             }
         }
     }

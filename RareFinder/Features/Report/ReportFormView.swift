@@ -88,6 +88,7 @@ struct ReportFormView: View {
                 Section {
                     TextField("Describe what you observed…", text: $note, axis: .vertical)
                         .lineLimit(4...8)
+                        .accessibilityIdentifier("observation_note")
                 } header: {
                     Text("Observation")
                 }
@@ -177,6 +178,8 @@ struct ReportFormView: View {
                     }
                     .disabled(note.isEmpty || submitting)
                     .accessibilityHint(note.isEmpty ? "Add an observation note to enable submission" : "")
+                    .accessibilityIdentifier("transmit_intelligence")
+                    .accessibilityLabel("Transmit Intelligence")
                 }
         }
         .modifier(StandaloneChrome(embedded: embedded, dismiss: dismiss))

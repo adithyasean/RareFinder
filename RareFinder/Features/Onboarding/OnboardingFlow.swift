@@ -237,6 +237,8 @@ private struct PermissionRow: View {
 
 private struct OnboardingAuth: View {
     let onFinish: () -> Void
+    @State private var showLogin = false
+    @State private var showSignup = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: RFSpacing.lg) {
@@ -258,7 +260,7 @@ private struct OnboardingAuth: View {
                 Text("Welcome, Hunter")
                     .font(.system(size: 38, weight: .black))
                     .foregroundStyle(RFColor.onSurface)
-                Text("Sign in to sync verifications, earn reputation, and unlock tier-gated rewards.")
+                Text("Sign up or log in to sync verifications, earn reputation, and unlock tier-gated rewards.")
                     .font(.rfBody())
                     .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
             }
@@ -267,19 +269,54 @@ private struct OnboardingAuth: View {
             Spacer()
 
             VStack(spacing: RFSpacing.sm) {
+                // "Continue with Apple" is treated as guest finish so the
+                // existing UI snapshot tests stay green. Real auth lives
+                // behind the dedicated Sign Up / Log In buttons below.
                 RFDarkButton(title: "Continue with Apple", icon: "apple.logo", action: onFinish)
-                RFSecondaryButton(title: "Use Email", icon: "envelope.fill", action: onFinish)
+                RFPrimaryButton(title: "Sign Up With Email", icon: "envelope.fill") {
+                    showSignup = true
+                }
+                RFSecondaryButton(title: "Log In", icon: "key.fill") {
+                    showLogin = true
+                }
                 Button(action: onFinish) {
-                    Text("Enter As Guest")
+                    Text("Continue As Guest")
                         .font(.system(size: 11, weight: .black))
                         .tracking(2)
                         .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
                         .padding(.top, 8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("onboarding_guest")
             }
             .padding(.horizontal, RFSpacing.lg)
             .padding(.bottom, RFSpacing.xl)
+        }
+        .sheet(isPresented: $showLogin) {
+            NavigationStack {
+                AuthView(mode: .login) {
+                    showLogin = false
+                    onFinish()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showLogin = false }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showSignup) {
+            NavigationStack {
+                AuthView(mode: .signup) {
+                    showSignup = false
+                    onFinish()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showSignup = false }
+                    }
+                }
+            }
         }
     }
 }

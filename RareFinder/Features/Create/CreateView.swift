@@ -38,6 +38,7 @@ struct CreateView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("create_mode_picker")
                 .padding(.horizontal, RFSpacing.md)
                 .padding(.top, RFSpacing.sm)
                 .padding(.bottom, RFSpacing.sm)

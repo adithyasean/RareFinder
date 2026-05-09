@@ -5,10 +5,27 @@ import CoreLocation
 struct BackendClient {
     var baseURL: URL
     var session: URLSession
+    /// Closure that returns the current bearer token, or nil. Looked up on
+    /// every request so logout/login updates take effect immediately
+    /// without rebuilding the client.
+    var tokenProvider: () -> String? = {
+        UserDefaults.standard.string(forKey: "rf.authToken")
+    }
 
-    init(baseURL: URL = URL(string: "http://localhost:8000")!, session: URLSession = .shared) {
+    init(
+        baseURL: URL = URL(string: "http://localhost:8000")!,
+        session: URLSession = .shared,
+        tokenProvider: (() -> String?)? = nil
+    ) {
         self.baseURL = baseURL
         self.session = session
+        if let tokenProvider { self.tokenProvider = tokenProvider }
+    }
+
+    private func attachAuth(to request: inout URLRequest) {
+        if let token = tokenProvider(), !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
     }
 
     // MARK: - DTOs
@@ -76,6 +93,36 @@ struct BackendClient {
         let verifications: Int
         let streak: Int
         let is_moderator: Bool
+        let email: String?
+    }
+
+    struct OTPRequestBody: Encodable {
+        let email: String
+        let purpose: String
+    }
+
+    struct OTPResponseDTO: Decodable {
+        let code: String
+        let expires_in: Int
+        let email: String
+        let purpose: String
+        let message: String
+    }
+
+    struct LoginBody: Encodable {
+        let email: String
+        let code: String
+    }
+
+    struct SignupBody: Encodable {
+        let email: String
+        let code: String
+        let display_name: String
+    }
+
+    struct AuthResponseDTO: Decodable {
+        let token: String
+        let hunter: HunterDTO
     }
 
     struct RewardDTO: Decodable {
@@ -176,7 +223,7 @@ struct BackendClient {
         var request = URLRequest(url: baseURL.appendingPathComponent("/health"))
         request.timeoutInterval = 4
         let (_, response) = try await session.data(for: request)
-        try Self.verify(response)
+        try Self.verify(response, data: nil)
     }
 
     func fetchBounties() async throws -> [BountyDTO] { try await get("/bounties") }
@@ -220,11 +267,39 @@ struct BackendClient {
         request.httpBody = body
         
         let (responseData, response) = try await session.data(for: request)
-        try Self.verify(response)
+        try Self.verify(response, data: nil)
         
         struct UploadResponse: Decodable { let url: String }
         let result = try Self.decoder.decode(UploadResponse.self, from: responseData)
         return result.url
+    }
+
+    // MARK: - Auth
+
+    func requestOTP(email: String, purpose: String) async throws -> OTPResponseDTO {
+        try await post("/auth/request-otp", body: OTPRequestBody(email: email, purpose: purpose))
+    }
+
+    func login(email: String, code: String) async throws -> AuthResponseDTO {
+        try await post("/auth/login", body: LoginBody(email: email, code: code))
+    }
+
+    func signup(email: String, code: String, displayName: String) async throws -> AuthResponseDTO {
+        try await post(
+            "/auth/signup",
+            body: SignupBody(email: email, code: code, display_name: displayName)
+        )
+    }
+
+    func logout(token: String) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/auth/logout"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 5
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data("{}".utf8)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (_, response) = try await session.data(for: request)
+        try Self.verify(response, data: nil)
     }
 
     /// `action` ∈ { "quarantine", "action", "dismiss" }.
@@ -239,8 +314,9 @@ struct BackendClient {
     private func get<T: Decodable>(_ path: String) async throws -> T {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.timeoutInterval = 5
+        attachAuth(to: &request)
         let (data, response) = try await session.data(for: request)
-        try Self.verify(response)
+        try Self.verify(response, data: data)
         return try Self.decoder.decode(T.self, from: data)
     }
 
@@ -249,20 +325,33 @@ struct BackendClient {
         request.httpMethod = "POST"
         request.timeoutInterval = 5
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        attachAuth(to: &request)
         if !(body is EmptyBody) {
             request.httpBody = try Self.encoder.encode(body)
         } else {
             request.httpBody = Data("{}".utf8)
         }
         let (data, response) = try await session.data(for: request)
-        try Self.verify(response)
+        try Self.verify(response, data: data)
         return try Self.decoder.decode(T.self, from: data)
     }
 
-    private static func verify(_ response: URLResponse) throws {
+    struct BackendError: LocalizedError {
+        let status: Int
+        let detail: String
+        var errorDescription: String? { detail }
+    }
+
+    private static func verify(_ response: URLResponse, data: Data? = nil) throws {
         guard let http = response as? HTTPURLResponse else { return }
         guard (200..<300).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
+            var detail = "Request failed (\(http.statusCode))"
+            if let data,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let d = json["detail"] as? String {
+                detail = d
+            }
+            throw BackendError(status: http.statusCode, detail: detail)
         }
     }
 

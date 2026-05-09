@@ -29,9 +29,41 @@ struct DetailView: View {
                 .ignoresSafeArea(edges: .top)
             }
         }
+        .overlay(alignment: .top) {
+            if let toast = scannerToast {
+                Text(toast)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(.black.opacity(0.8), in: Capsule())
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .accessibilityLabel(toast)
+                    .accessibilityIdentifier("scanner_toast")
+            }
+        }
         .tint(.white)
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Back")
+            }
+        }
         .sheet(isPresented: $showReportSheet) {
             ReportFormView(prefilledBounty: bounty)
         }
@@ -61,7 +93,7 @@ struct DetailView: View {
         }
 
         withAnimation { scannerToast = "Scanner armed for \(bounty.district)" }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
             withAnimation { scannerToast = nil }
         }
     }
