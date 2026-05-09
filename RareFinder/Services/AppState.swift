@@ -43,4 +43,30 @@ final class AppState {
         hasCompletedOnboarding = false
         UserDefaults.standard.set(false, forKey: onboardingKey)
     }
+
+    func logout(context: ModelContext) async {
+        // 1. Clear backend session
+        await auth.logout()
+        
+        // 2. Reset navigation & local state
+        resetOnboarding()
+        isModeratorMode = false
+        selectedCategory = nil
+        location.reset()
+        await notifications.refreshAuthorization()
+        
+        // 3. Wipe local cache
+        for type in [
+            Bounty.self as any PersistentModel.Type,
+            IntelReport.self,
+            IntelReply.self,
+            Reward.self,
+            AppNotification.self,
+            ModerationFlag.self,
+            HunterProfile.self
+        ] {
+            try? context.delete(model: type)
+        }
+        try? context.save()
+    }
 }

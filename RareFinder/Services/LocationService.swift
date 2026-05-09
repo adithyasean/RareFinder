@@ -77,6 +77,33 @@ final class LocationService: NSObject {
         manager.stopUpdatingLocation()
     }
 
+    /// Stops all background monitoring, clears tracked zones, and removes
+    /// pending vicinity notifications from the system tray.
+    func reset() {
+        #if os(iOS)
+        // Stop the OS-level region monitoring
+        for region in manager.monitoredRegions {
+            manager.stopMonitoring(for: region)
+        }
+        #endif
+        
+        // Stop GPS updates
+        manager.stopUpdatingLocation()
+        
+        // Clear internal state
+        watched.removeAll()
+        monitoredRegions.removeAll()
+        alerted.removeAll()
+        currentLocation = nil
+        
+        // Clear the notification tray
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        
+        // Refresh authorization status
+        authorization = manager.authorizationStatus
+    }
+
     /// Pure check — used by report submission and by unit tests.
     nonisolated static func isWithinGeofence(
         userCoordinate: CLLocationCoordinate2D,

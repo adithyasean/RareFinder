@@ -97,7 +97,7 @@ struct BackendClient {
     }
 
     struct OTPRequestBody: Encodable {
-        let email: String
+        let identifier: String
         let purpose: String
     }
 
@@ -110,14 +110,21 @@ struct BackendClient {
     }
 
     struct LoginBody: Encodable {
-        let email: String
-        let code: String
+        let identifier: String
+        let password: String
     }
 
     struct SignupBody: Encodable {
         let email: String
+        let password: String
         let code: String
         let display_name: String
+    }
+
+    struct ResetPasswordBody: Encodable {
+        let email: String
+        let code: String
+        let new_password: String
     }
 
     struct AuthResponseDTO: Decodable {
@@ -276,18 +283,25 @@ struct BackendClient {
 
     // MARK: - Auth
 
-    func requestOTP(email: String, purpose: String) async throws -> OTPResponseDTO {
-        try await post("/auth/request-otp", body: OTPRequestBody(email: email, purpose: purpose))
+    func requestOTP(identifier: String, purpose: String) async throws -> OTPResponseDTO {
+        try await post("/auth/request-otp", body: OTPRequestBody(identifier: identifier, purpose: purpose))
     }
 
-    func login(email: String, code: String) async throws -> AuthResponseDTO {
-        try await post("/auth/login", body: LoginBody(email: email, code: code))
+    func login(identifier: String, password: String) async throws -> AuthResponseDTO {
+        try await post("/auth/login", body: LoginBody(identifier: identifier, password: password))
     }
 
-    func signup(email: String, code: String, displayName: String) async throws -> AuthResponseDTO {
+    func signup(email: String, password: String, code: String, displayName: String) async throws -> AuthResponseDTO {
         try await post(
             "/auth/signup",
-            body: SignupBody(email: email, code: code, display_name: displayName)
+            body: SignupBody(email: email, password: password, code: code, display_name: displayName)
+        )
+    }
+
+    func resetPassword(email: String, code: String, newPassword: String) async throws {
+        let _: [String: Bool] = try await post(
+            "/auth/reset-password",
+            body: ResetPasswordBody(email: email, code: code, new_password: newPassword)
         )
     }
 

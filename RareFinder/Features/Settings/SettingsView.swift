@@ -139,8 +139,7 @@ struct SettingsView: View {
                 }
                 Button(role: .destructive) {
                     Task {
-                        await appState.auth.logout()
-                        await appState.sync.syncAll(context: context)
+                        await appState.logout(context: context)
                     }
                 } label: {
                     Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")

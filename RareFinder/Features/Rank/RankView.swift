@@ -85,8 +85,7 @@ struct RankView: View {
                 .confirmationDialog("Log out of Rare Finder?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
                     Button("Log Out", role: .destructive) {
                         Task {
-                            await appState.auth.logout()
-                            await appState.sync.syncAll(context: context)
+                            await appState.logout(context: context)
                         }
                     }
                     Button("Cancel", role: .cancel) {}

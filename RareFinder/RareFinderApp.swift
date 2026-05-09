@@ -67,6 +67,7 @@ private struct RootView: View {
         }
         .rfAccessibilityOverrides()
         .task {
+            guard appState.hasCompletedOnboarding else { return }
             await appState.sync.syncAll(context: context)
             if let bounties = try? context.fetch(FetchDescriptor<Bounty>()) {
                 appState.location.monitorAll(bounties: bounties)

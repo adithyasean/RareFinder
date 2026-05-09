@@ -8,7 +8,7 @@ import Observation
 @Observable
 @MainActor
 final class AuthService {
-    enum Mode: String { case login, signup }
+    enum Mode: String { case login, signup, resetPassword }
 
     struct Session: Codable, Equatable {
         var token: String
@@ -19,13 +19,13 @@ final class AuthService {
     }
 
     enum AuthError: LocalizedError {
-        case invalidEmail
+        case invalidIdentifier
         case invalidCode
         case backend(String)
 
         var errorDescription: String? {
             switch self {
-            case .invalidEmail: return "Enter a valid email."
+            case .invalidIdentifier: return "Enter a valid email or username."
             case .invalidCode: return "Invalid or expired code."
             case .backend(let m): return m
             }
@@ -45,8 +45,8 @@ final class AuthService {
     let client: BackendClient
     let notifications: NotificationService
 
-    init(client: BackendClient = BackendClient(), notifications: NotificationService) {
-        self.client = client
+    init(notifications: NotificationService, client: BackendClient? = nil) {
+        self.client = client ?? BackendClient()
         self.notifications = notifications
         self.session = Self.loadSession()
     }
@@ -73,13 +73,20 @@ final class AuthService {
 
     /// Requests an OTP code from the backend and surfaces it as a local
     /// notification so the user can grab it quickly.
-    func requestOTP(email: String, mode: Mode) async throws -> String {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard trimmed.contains("@"), trimmed.contains(".") else {
-            throw AuthError.invalidEmail
+    func requestOTP(identifier: String, mode: Mode) async throws -> String {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        // Relaxed validation: check if it's an email OR a handle
+        let isEmail = trimmed.contains("@") && trimmed.contains(".")
+        let isHandle = trimmed.count >= 3 // Basic sanity check
+        
+        guard isEmail || isHandle else {
+            throw AuthError.invalidIdentifier
         }
+        
         do {
-            let response = try await client.requestOTP(email: trimmed, purpose: mode.rawValue)
+            let purpose = mode == .resetPassword ? "reset_password" : mode.rawValue
+            let response = try await client.requestOTP(identifier: trimmed, purpose: purpose)
             pendingOTP = response.code
             lastIssuedEmail = response.email
             await notifications.scheduleLocalOTP(code: response.code, email: response.email, mode: mode)
@@ -90,10 +97,9 @@ final class AuthService {
         }
     }
 
-    func login(email: String, code: String) async throws {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let cleanCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        let response = try await client.login(email: trimmed, code: cleanCode)
+    func login(identifier: String, password: String) async throws {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let response = try await client.login(identifier: trimmed, password: password)
         let session = Session(
             token: response.token,
             hunterId: response.hunter.id,
@@ -105,11 +111,12 @@ final class AuthService {
         persist(session)
     }
 
-    func signup(email: String, code: String, displayName: String) async throws {
+    func signup(email: String, password: String, code: String, displayName: String) async throws {
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cleanCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
         let response = try await client.signup(
             email: trimmed,
+            password: password,
             code: cleanCode,
             displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         )
@@ -122,6 +129,12 @@ final class AuthService {
         )
         self.session = session
         persist(session)
+    }
+
+    func resetPassword(email: String, code: String, newPassword: String) async throws {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await client.resetPassword(email: trimmed, code: cleanCode, newPassword: newPassword)
     }
 
     func logout() async {
@@ -138,7 +151,12 @@ extension NotificationService {
     /// Schedules a local notification carrying the fresh OTP. The body is
     /// kept short so the lock-screen banner shows the code in full.
     func scheduleLocalOTP(code: String, email: String, mode: AuthService.Mode) async {
-        let title = mode == .signup ? "Rare Finder Sign-Up Code" : "Rare Finder Login Code"
+        let title: String
+        switch mode {
+        case .signup: title = "Rare Finder Sign-Up Code"
+        case .login: title = "Rare Finder Login Code"
+        case .resetPassword: title = "Rare Finder Password Reset"
+        }
         let body = "Your code is \(code). Tap to enter it. (Valid 5 min)"
         await scheduleVicinityAlert(title: title, body: body, after: 1)
     }
