@@ -20,7 +20,13 @@ final class Bounty {
     var createdAt: Date
     var updatedAt: Date
     var symbol: String
+    var imageURL: String?
     var isRemote: Bool = false
+    /// `true` = open search area (radius-based, hidden from global map);
+    /// `false` = exact-location Intel marker (default).
+    var isBounty: Bool = false
+    /// Search radius in kilometres; only meaningful when `isBounty == true`.
+    var radiusKm: Double = 0.5
     @Relationship(deleteRule: .cascade, inverse: \IntelReport.bounty) var reports: [IntelReport] = []
 
     init(
@@ -37,7 +43,10 @@ final class Bounty {
         downvotes: Int = 0,
         intelScore: Int = 1000,
         symbol: String? = nil,
+        imageURL: String? = nil,
         isRemote: Bool = false,
+        isBounty: Bool = false,
+        radiusKm: Double = 0.5,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -55,7 +64,10 @@ final class Bounty {
         self.downvotes = downvotes
         self.intelScore = intelScore
         self.symbol = symbol ?? category.symbol
+        self.imageURL = imageURL
         self.isRemote = isRemote
+        self.isBounty = isBounty
+        self.radiusKm = radiusKm
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

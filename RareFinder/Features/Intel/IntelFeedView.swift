@@ -3,26 +3,42 @@ import SwiftData
 
 struct IntelFeedView: View {
     @Query(sort: [SortDescriptor(\IntelReport.createdAt, order: .reverse)]) private var reports: [IntelReport]
+    @Environment(\.modelContext) private var context
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: RFSpacing.xl) {
-                    ForEach(reports) { report in
-                        NavigationLink {
-                            if let bounty = report.bounty {
-                                DetailView(bounty: bounty)
-                            } else {
-                                Text(report.note)
+                    ConnectionBanner(connection: appState.sync.connection) {
+                        Task { await appState.sync.syncAll(context: context) }
+                    }
+                    .padding(.horizontal, 4)
+                    if reports.isEmpty {
+                        EmptyStateCard(
+                            symbol: "antenna.radiowaves.left.and.right",
+                            message: "Pull to sync the satellite feed."
+                        )
+                    } else {
+                        ForEach(reports) { report in
+                            NavigationLink {
+                                if let bounty = report.bounty {
+                                    DetailView(bounty: bounty)
+                                } else {
+                                    Text(report.note)
+                                }
+                            } label: {
+                                IntelCard(report: report)
                             }
-                        } label: {
-                            IntelCard(report: report)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, RFSpacing.lg)
                 .padding(.vertical, RFSpacing.md)
+            }
+            .refreshable {
+                await appState.sync.syncAll(context: context)
             }
             .background(RFColor.surface)
             .navigationTitle("Satellite Feed")
@@ -36,22 +52,34 @@ private struct IntelCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RFSpacing.md) {
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 36, style: .continuous)
-                    .fill(
-                        LinearGradient(colors: [
-                            report.status.tint.opacity(0.85),
-                            RFColor.onSurface
-                        ], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
+                if let imageURL = report.imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { image in
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(RFColor.surfaceContainer)
+                    }
+                    .frame(maxWidth: .infinity)
                     .aspectRatio(16/10, contentMode: .fit)
-                    .overlay(
-                        Image(systemName: report.symbol)
-                            .font(.system(size: 110, weight: .black))
-                            .foregroundStyle(.white.opacity(0.2))
-                            .offset(x: 60, y: 20)
-                            .accessibilityHidden(true)
-                    )
                     .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .fill(
+                            LinearGradient(colors: [
+                                report.status.tint.opacity(0.85),
+                                RFColor.onSurface
+                            ], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .aspectRatio(16/10, contentMode: .fit)
+                        .overlay(
+                            Image(systemName: report.symbol)
+                                .font(.system(size: 110, weight: .black))
+                                .foregroundStyle(.white.opacity(0.2))
+                                .offset(x: 60, y: 20)
+                                .accessibilityHidden(true)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
+                }
 
                 HStack(spacing: 8) {
                     Tag(text: report.status.rawValue, tint: report.status.tint)

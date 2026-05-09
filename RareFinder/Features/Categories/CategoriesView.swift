@@ -62,7 +62,7 @@ private struct CategoryTile: View {
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .padding(RFSpacing.md)
         .rfCardStyle(cornerRadius: 28)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(category.rawValue), \(activeCount) live nodes")
     }
 }

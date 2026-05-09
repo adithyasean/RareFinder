@@ -10,7 +10,21 @@ import SwiftData
 
 @main
 struct RareFinderApp: App {
-    @State private var appState = AppState()
+    @State private var appState: AppState
+
+    init() {
+        // UI-test launch flags. Must run before AppState reads UserDefaults.
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-RFUITestsReset") {
+            UserDefaults.standard.removeObject(forKey: "rf.onboardingComplete")
+            UserDefaults.standard.removeObject(forKey: "rf.authSession")
+            UserDefaults.standard.removeObject(forKey: "rf.authToken")
+        }
+        if args.contains("-RFUITestsSkipOnboarding") {
+            UserDefaults.standard.set(true, forKey: "rf.onboardingComplete")
+        }
+        _appState = State(initialValue: AppState())
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -40,6 +54,7 @@ struct RareFinderApp: App {
 
 private struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(AppState.self) private var appState
 
     var body: some View {
@@ -50,11 +65,17 @@ private struct RootView: View {
                 OnboardingFlow()
             }
         }
+        .rfAccessibilityOverrides()
         .task {
+            guard appState.hasCompletedOnboarding else { return }
             await appState.sync.syncAll(context: context)
-            appState.bootstrap(context: context)
             if let bounties = try? context.fetch(FetchDescriptor<Bounty>()) {
                 appState.location.monitorAll(bounties: bounties)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await appState.sync.syncAll(context: context) }
             }
         }
     }

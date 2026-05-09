@@ -1,13 +1,13 @@
 import SwiftUI
 
 enum RFTab: Hashable, CaseIterable {
-    case radar, map, report, intel, rank
+    case radar, map, create, intel, rank
 
     var title: String {
         switch self {
         case .radar: return "Radar"
         case .map: return "Map"
-        case .report: return "Report"
+        case .create: return "Create"
         case .intel: return "Intel"
         case .rank: return "Rank"
         }
@@ -17,7 +17,7 @@ enum RFTab: Hashable, CaseIterable {
         switch self {
         case .radar: return "dot.radiowaves.left.and.right"
         case .map: return "map.fill"
-        case .report: return "plus.circle.fill"
+        case .create: return "plus.circle.fill"
         case .intel: return "bubble.left.and.bubble.right.fill"
         case .rank: return "person.crop.circle.fill"
         }
@@ -26,7 +26,7 @@ enum RFTab: Hashable, CaseIterable {
 
 struct MainTabView: View {
     @State private var selection: RFTab = .radar
-    @State private var showReportSheet = false
+    @State private var showCreateSheet = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -39,8 +39,8 @@ struct MainTabView: View {
                 .tag(RFTab.map)
 
             Color.clear
-                .tabItem { Label(RFTab.report.title, systemImage: RFTab.report.symbol) }
-                .tag(RFTab.report)
+                .tabItem { Label(RFTab.create.title, systemImage: RFTab.create.symbol) }
+                .tag(RFTab.create)
 
             IntelFeedView()
                 .tabItem { Label(RFTab.intel.title, systemImage: RFTab.intel.symbol) }
@@ -52,14 +52,14 @@ struct MainTabView: View {
         }
         .tint(RFColor.primary)
         .onChange(of: selection) { _, newValue in
-            if newValue == .report {
-                showReportSheet = true
-                // Report is a modal — bounce selection back to where the user was.
+            if newValue == .create {
+                showCreateSheet = true
+                // Create is a modal — bounce selection back to where the user was.
                 DispatchQueue.main.async { selection = .radar }
             }
         }
-        .sheet(isPresented: $showReportSheet) {
-            ReportFormView()
+        .sheet(isPresented: $showCreateSheet) {
+            CreateView()
         }
     }
 }

@@ -13,17 +13,24 @@ final class AppState {
     let location: LocationService
     let notifications: NotificationService
     let sync: SyncService
+    let auth: AuthService
+    let accessibility: AccessibilitySettings
 
     private let onboardingKey = "rf.onboardingComplete"
 
     init(
         location: LocationService? = nil,
         notifications: NotificationService? = nil,
-        sync: SyncService? = nil
+        sync: SyncService? = nil,
+        auth: AuthService? = nil,
+        accessibility: AccessibilitySettings? = nil
     ) {
+        let notifs = notifications ?? NotificationService()
         self.location = location ?? LocationService()
-        self.notifications = notifications ?? NotificationService()
+        self.notifications = notifs
         self.sync = sync ?? SyncService()
+        self.auth = auth ?? AuthService(notifications: notifs)
+        self.accessibility = accessibility ?? AccessibilitySettings()
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: onboardingKey)
     }
 
@@ -37,34 +44,29 @@ final class AppState {
         UserDefaults.standard.set(false, forKey: onboardingKey)
     }
 
-    /// Inserts demo moderation flags locally so the Moderator screen has content
-    /// even when the backend is unreachable. Idempotent — only runs when the
-    /// SwiftData store has zero flags after the most recent sync attempt.
-    func bootstrap(context: ModelContext) {
-        let descriptor = FetchDescriptor<ModerationFlag>()
-        let existing = (try? context.fetch(descriptor)) ?? []
-        guard existing.isEmpty else { return }
-        let demo: [ModerationFlag] = [
-            ModerationFlag(
-                title: "Phantom Fuel Drop — Sector 4",
-                handle: "@grid_walker",
-                reason: "Reported full stock at a station that closed last week. Three users contested.",
-                sightingCount: 3
-            ),
-            ModerationFlag(
-                title: "Spoofed Pharmacy Sighting",
-                handle: "@delta_runner",
-                reason: "Coordinates resolved 1.2 km from the reporter's last known location.",
-                sightingCount: 2
-            ),
-            ModerationFlag(
-                title: "Duplicate Collector Drop",
-                handle: "@nova_one",
-                reason: "Identical photo submitted from two accounts within four minutes.",
-                sightingCount: 4
-            )
-        ]
-        for flag in demo { context.insert(flag) }
+    func logout(context: ModelContext) async {
+        // 1. Clear backend session
+        await auth.logout()
+        
+        // 2. Reset navigation & local state
+        resetOnboarding()
+        isModeratorMode = false
+        selectedCategory = nil
+        location.reset()
+        await notifications.refreshAuthorization()
+        
+        // 3. Wipe local cache
+        for type in [
+            Bounty.self as any PersistentModel.Type,
+            IntelReport.self,
+            IntelReply.self,
+            Reward.self,
+            AppNotification.self,
+            ModerationFlag.self,
+            HunterProfile.self
+        ] {
+            try? context.delete(model: type)
+        }
         try? context.save()
     }
 }

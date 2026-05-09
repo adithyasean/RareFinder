@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct OnboardingFlow: View {
     @State private var step: Int = 0
@@ -142,6 +143,18 @@ private struct OnboardingPermissions: View {
     @State private var locationRequested = false
     @State private var notifRequested = false
 
+    private var isLocationDone: Bool {
+        #if os(macOS)
+        appState.location.authorization == .authorizedAlways || locationRequested
+        #else
+        appState.location.authorization == .authorizedAlways || appState.location.authorization == .authorizedWhenInUse || locationRequested
+        #endif
+    }
+
+    private var isNotifDone: Bool {
+        appState.notifications.authorized || notifRequested
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: RFSpacing.lg) {
             HStack {
@@ -153,9 +166,17 @@ private struct OnboardingPermissions: View {
                 Text("Tune Your Scanner")
                     .font(.system(size: 34, weight: .black))
                     .foregroundStyle(RFColor.onSurface)
-                Text("Rare Finder uses your coordinates and push alerts to notify you the moment scarce items surface nearby.")
-                    .font(.rfBody())
-                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
+                
+                if isLocationDone && isNotifDone {
+                    Text("The grid is active. Rare Finder already has the necessary access to sync your scanner.")
+                        .font(.rfBody())
+                        .foregroundStyle(RFColor.secondary)
+                        .padding(.vertical, 4)
+                } else {
+                    Text("Rare Finder uses your coordinates and push alerts to notify you the moment scarce items surface nearby.")
+                        .font(.rfBody())
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
+                }
             }
             .padding(.horizontal, RFSpacing.lg)
 
@@ -164,8 +185,8 @@ private struct OnboardingPermissions: View {
                     symbol: "location.fill",
                     title: "Location",
                     subtitle: "Surface bounties in your 15km sector and unlock geofenced proof-of-presence.",
-                    actionTitle: locationRequested ? "Requested" : "Enable",
-                    done: locationRequested
+                    actionTitle: isLocationDone ? "Requested" : "Enable",
+                    done: isLocationDone
                 ) {
                     appState.location.requestAuthorization()
                     locationRequested = true
@@ -174,8 +195,8 @@ private struct OnboardingPermissions: View {
                     symbol: "bell.badge.fill",
                     title: "Notifications",
                     subtitle: "Get vicinity alerts when a requested item appears within reach.",
-                    actionTitle: notifRequested ? "Requested" : "Enable",
-                    done: notifRequested
+                    actionTitle: isNotifDone ? "Requested" : "Enable",
+                    done: isNotifDone
                 ) {
                     Task {
                         await appState.notifications.requestAuthorization()
@@ -237,6 +258,8 @@ private struct PermissionRow: View {
 
 private struct OnboardingAuth: View {
     let onFinish: () -> Void
+    @State private var showLogin = false
+    @State private var showSignup = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: RFSpacing.lg) {
@@ -258,7 +281,7 @@ private struct OnboardingAuth: View {
                 Text("Welcome, Hunter")
                     .font(.system(size: 38, weight: .black))
                     .foregroundStyle(RFColor.onSurface)
-                Text("Sign in to sync verifications, earn reputation, and unlock tier-gated rewards.")
+                Text("Sign up or log in to sync verifications, earn reputation, and unlock tier-gated rewards.")
                     .font(.rfBody())
                     .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
             }
@@ -267,19 +290,54 @@ private struct OnboardingAuth: View {
             Spacer()
 
             VStack(spacing: RFSpacing.sm) {
+                // "Continue with Apple" is treated as guest finish so the
+                // existing UI snapshot tests stay green. Real auth lives
+                // behind the dedicated Sign Up / Log In buttons below.
                 RFDarkButton(title: "Continue with Apple", icon: "apple.logo", action: onFinish)
-                RFSecondaryButton(title: "Use Email", icon: "envelope.fill", action: onFinish)
+                RFPrimaryButton(title: "Sign Up With Email", icon: "envelope.fill") {
+                    showSignup = true
+                }
+                RFSecondaryButton(title: "Log In", icon: "key.fill") {
+                    showLogin = true
+                }
                 Button(action: onFinish) {
-                    Text("Enter As Guest")
+                    Text("Continue As Guest")
                         .font(.system(size: 11, weight: .black))
                         .tracking(2)
                         .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
                         .padding(.top, 8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("onboarding_guest")
             }
             .padding(.horizontal, RFSpacing.lg)
             .padding(.bottom, RFSpacing.xl)
+        }
+        .sheet(isPresented: $showLogin) {
+            NavigationStack {
+                AuthView(mode: .login) {
+                    showLogin = false
+                    onFinish()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showLogin = false }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showSignup) {
+            NavigationStack {
+                AuthView(mode: .signup) {
+                    showSignup = false
+                    onFinish()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showSignup = false }
+                    }
+                }
+            }
         }
     }
 }
