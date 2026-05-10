@@ -25,3 +25,10 @@ enum BountyCategory: String, Codable, CaseIterable, Identifiable, Hashable {
         }
     }
 }
+
+enum FeedFilter: String, CaseIterable, Identifiable, Hashable {
+    case intel, bounty
+    var id: String { rawValue }
+    var label: String { self == .intel ? "Intel" : "Bounty" }
+    var systemImage: String { self == .intel ? "mappin.and.ellipse" : "scope" }
+}

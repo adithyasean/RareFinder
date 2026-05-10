@@ -11,12 +11,6 @@ struct RadarView: View {
     /// Top-level filter for the Radar feed. Intel = exact-location finds
     /// (services / goods), Bounties = open search areas. Search + category
     /// chips apply to whichever segment is active.
-    enum FeedFilter: String, CaseIterable, Identifiable, Hashable {
-        case intel, bounty
-        var id: String { rawValue }
-        var label: String { self == .intel ? "Intel" : "Bounty" }
-        var systemImage: String { self == .intel ? "mappin.and.ellipse" : "scope" }
-    }
     @State private var feedFilter: FeedFilter = .intel
 
     var body: some View {
@@ -172,34 +166,6 @@ struct RadarView: View {
     }
 }
 
-struct CategoryChip: View {
-    let title: String
-    let isActive: Bool
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            ChipLabel(title: title, isActive: isActive)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-}
-
-struct ChipLabel: View {
-    let title: String
-    let isActive: Bool
-    var body: some View {
-        Text(title)
-            .font(.system(size: 13, weight: .heavy))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .foregroundStyle(isActive ? .white : RFColor.onSurfaceVariant)
-            .background(
-                Capsule().fill(isActive ? AnyShapeStyle(RFColor.primaryGradient) : AnyShapeStyle(Color.white))
-            )
-            .overlay(Capsule().stroke(isActive ? RFColor.primary : RFColor.outlineVariant.opacity(0.3), lineWidth: 1))
-    }
-}
 
 struct BountyCard: View {
     let bounty: Bounty
