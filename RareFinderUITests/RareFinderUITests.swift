@@ -411,9 +411,9 @@ final class RareFinderUITests: XCTestCase {
         // Rewards toolbar item — search for the toolbar button.
         let rewards = app.buttons["Rewards"]
         if !rewards.waitForExistence(timeout: 3) {
-            // toolbar secondary actions on iOS may live behind an overflow menu.
+            // Native secondary action menu typically uses "More" or ellipsis icon.
             let more = app.navigationBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
-            if more.exists { more.tap() }
+            if more.waitForExistence(timeout: 3) { more.tap() }
         }
         if rewards.waitForExistence(timeout: 4) {
             rewards.tap()
@@ -466,6 +466,10 @@ final class RareFinderUITests: XCTestCase {
 
         // Settings is the primary toolbar action with accessibilityLabel "Settings".
         let settings = app.buttons["Settings"]
+        if !settings.waitForExistence(timeout: 3) {
+            let more = app.navigationBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
+            if more.waitForExistence(timeout: 3) { more.tap() }
+        }
         waitFor(settings, 4)
         settings.tap()
         waitFor(app.navigationBars["Settings"], 6)
@@ -493,6 +497,10 @@ final class RareFinderUITests: XCTestCase {
         waitFor(app.navigationBars["Rare Finder"], 8)
 
         let bell = app.buttons["Notifications"]
+        if !bell.waitForExistence(timeout: 3) {
+            let more = app.navigationBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
+            if more.waitForExistence(timeout: 3) { more.tap() }
+        }
         waitFor(bell, 6)
         bell.tap()
         waitFor(app.navigationBars["Notifications"], 6)
@@ -515,14 +523,10 @@ final class RareFinderUITests: XCTestCase {
         let app = launchAppOnTabs()
         waitFor(app.navigationBars["Rare Finder"], 8)
 
-        // "Categories" appears in the toolbar overflow (secondary action).
-        let more = app.navigationBars.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
-        if more.waitForExistence(timeout: 3) { more.tap() }
-
-        let categories = app.buttons["Categories"]
-        waitFor(categories, 4)
-        categories.tap()
+        // "Categories" grid is now accessed via the "More" chip in the filter section.
+        let moreChip = app.buttons["More"]
+        waitFor(moreChip, 6)
+        moreChip.tap()
 
         // CategoriesView has navigation title "Categories" and shows category tiles.
         waitFor(app.navigationBars["Categories"], 6)
@@ -577,6 +581,10 @@ final class RareFinderUITests: XCTestCase {
         waitFor(app.navigationBars["Hunter Profile"], 6)
 
         let moderator = app.buttons["Moderator"]
+        if !moderator.waitForExistence(timeout: 3) {
+            let more = app.navigationBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'more'")).firstMatch
+            if more.waitForExistence(timeout: 3) { more.tap() }
+        }
         if moderator.waitForExistence(timeout: 4) {
             moderator.tap()
             waitFor(app.navigationBars["Moderator"], 6)

@@ -35,6 +35,12 @@ struct MapSurfaceView: View {
     /// standalone and embedded modes by attaching to the nearest enclosing
     /// NavigationStack (ours or Radar's).
     @State private var detailRoute: DetailRoute?
+    
+    // Filter State
+    @State private var selectedCategory: BountyCategory? = nil
+    @State private var feedFilter: FeedFilter = .intel
+    
+    @Namespace private var mapScope
 
     private struct QuickViewToken: Identifiable, Equatable {
         let id: UUID
@@ -61,7 +67,26 @@ struct MapSurfaceView: View {
 
     @ViewBuilder
     private var content: some View {
-        mapBody
+        ZStack(alignment: .top) {
+            mapBody
+            
+            if filterBountyID == nil {
+                filterOverlay
+            }
+            
+            // Relocation Button positioned in the main view stack
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    MapUserLocationButton(scope: mapScope)
+                        .padding(.trailing, RFSpacing.lg)
+                        .padding(.bottom, 100) // Above tab bar
+                }
+            }
+        }
+        .toolbar(filterBountyID == nil ? .hidden : .visible, for: .navigationBar)
+        .mapScope(mapScope)
             .navigationTitle(navTitle)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -106,7 +131,7 @@ struct MapSurfaceView: View {
 
     @ViewBuilder
     private var mapBody: some View {
-        Map(position: $cameraPosition, interactionModes: .all, selection: $selected) {
+        Map(position: $cameraPosition, interactionModes: .all, selection: $selected, scope: mapScope) {
             UserAnnotation()
 
             ForEach(visibleItems) { bounty in
@@ -118,22 +143,58 @@ struct MapSurfaceView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-        .mapControls {
-            MapUserLocationButton()
-            MapCompass()
-            MapScaleView()
-        }
         .ignoresSafeArea(edges: .bottom)
     }
 
-    /// Global map shows only exact-location Intel items. When `filterBountyID`
+    /// Global map shows items based on active filters. When `filterBountyID`
     /// is provided, the map is restricted to that single record (whether it's
     /// an Intel or a Bounty zone) so the user sees just the area they picked.
     private var visibleItems: [Bounty] {
         if let id = filterBountyID {
             return bounties.filter { $0.id == id }
         }
-        return bounties.filter { !$0.isBounty }
+        return bounties.filter { b in
+            let matchesType = (feedFilter == .intel) ? !b.isBounty : b.isBounty
+            let matchesCat = selectedCategory == nil || b.category == selectedCategory
+            return matchesType && matchesCat
+        }
+    }
+
+    private var filterOverlay: some View {
+        VStack(spacing: RFSpacing.md) {
+            // Type Switcher
+            Picker("Feed filter", selection: $feedFilter) {
+                ForEach(FeedFilter.allCases) { f in
+                    Label(f.label, systemImage: f.systemImage).tag(f)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(RFSpacing.md)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+            .padding(.horizontal, RFSpacing.lg)
+            
+            // Category Chips (Horizontal Scroll)
+            if feedFilter == .intel {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        CategoryChip(title: "All Intelligence", isActive: selectedCategory == nil) {
+                            selectedCategory = nil
+                        }
+                        ForEach(BountyCategory.allCases) { cat in
+                            CategoryChip(title: cat.rawValue, isActive: selectedCategory == cat) {
+                                selectedCategory = selectedCategory == cat ? nil : cat
+                            }
+                        }
+                    }
+                    .padding(.horizontal, RFSpacing.lg)
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .padding(.top, filterBountyID == nil ? 12 : RFSpacing.sm)
+        .animation(.spring(duration: 0.3), value: feedFilter)
     }
 
     @MapContentBuilder

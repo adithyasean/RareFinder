@@ -10,6 +10,24 @@ struct LeaderboardEntry: Identifiable, Hashable {
     let rank: Int
     let verifications: Int
     let streak: Int
+    
+    var rankColor: Color {
+        switch rank {
+        case 1: return RFColor.primary
+        case 2: return RFColor.outline
+        case 3: return RFColor.primaryDeep
+        default: return RFColor.onSurfaceVariant.opacity(0.5)
+        }
+    }
+    
+    var rankIcon: String {
+        switch rank {
+        case 1: return "crown.fill"
+        case 2: return "medal.fill"
+        case 3: return "trophy.fill"
+        default: return "star.fill"
+        }
+    }
 }
 
 struct LeaderboardView: View {
@@ -49,8 +67,12 @@ struct LeaderboardView: View {
                 } else {
                     if let podium = podiumSlice {
                         podiumStrip(podium)
+                            .padding(.bottom, RFSpacing.md)
                     }
-                    rankList
+                    
+                    if entries.count > 3 {
+                        rankList
+                    }
                 }
             }
             .padding(RFSpacing.lg)
@@ -102,16 +124,20 @@ struct LeaderboardView: View {
 
     private func heightForRank(_ rank: Int) -> CGFloat {
         switch rank {
-        case 1: return 168
-        case 2: return 138
-        default: return 120
+        case 1: return 190
+        case 2: return 160
+        default: return 145
         }
     }
 
     private var rankList: some View {
-        VStack(spacing: RFSpacing.sm) {
-            ForEach(entries) { entry in
-                LeaderboardRow(entry: entry, isCurrentUser: entry.id == currentHunterID)
+        VStack(alignment: .leading, spacing: RFSpacing.md) {
+            Eyebrow(text: "Grid Standings", color: RFColor.onSurfaceVariant.opacity(0.5))
+            
+            VStack(spacing: RFSpacing.sm) {
+                ForEach(Array(entries.dropFirst(3))) { entry in
+                    LeaderboardRow(entry: entry, isCurrentUser: entry.id == currentHunterID)
+                }
             }
         }
     }
@@ -152,13 +178,13 @@ private struct PodiumTile: View {
                 AvatarView(seed: entry.avatarSeed, size: 56)
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(rankTint, lineWidth: 3)
+                            .stroke(entry.rankColor, lineWidth: 3)
                     )
-                Image(systemName: rankSymbol)
+                Image(systemName: entry.rankIcon)
                     .font(.system(size: 14, weight: .black))
                     .foregroundStyle(.white)
                     .padding(6)
-                    .background(rankTint, in: Circle())
+                    .background(entry.rankColor, in: Circle())
                     .offset(x: 6, y: -6)
             }
             Text(entry.displayName)
@@ -168,41 +194,24 @@ private struct PodiumTile: View {
             Text("\(entry.points) XP")
                 .font(.system(size: 11, weight: .black))
                 .tracking(1.2)
-                .foregroundStyle(rankTint)
-            Spacer(minLength: 0)
+                .foregroundStyle(entry.rankColor)
+            Spacer(minLength: RFSpacing.xs)
             Text("#\(entry.rank)")
-                .font(.system(size: 28, weight: .black))
+                .font(.system(size: 24, weight: .black))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: height * 0.5)
-                .background(rankTint, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .frame(height: height * 0.4)
+                .background(entry.rankColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .padding(RFSpacing.sm)
+        .padding(.top, RFSpacing.md)
+        .padding(.horizontal, RFSpacing.sm)
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .rfCardStyle(cornerRadius: 24)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(isCurrentUser ? RFColor.primary : .clear, lineWidth: isCurrentUser ? 3 : 0)
+                .stroke(isCurrentUser ? entry.rankColor : .clear, lineWidth: isCurrentUser ? 3 : 0)
         )
-    }
-
-    private var rankTint: Color {
-        switch entry.rank {
-        case 1: return RFColor.primary
-        case 2: return RFColor.outline
-        case 3: return RFColor.primaryDeep
-        default: return RFColor.onSurfaceVariant
-        }
-    }
-
-    private var rankSymbol: String {
-        switch entry.rank {
-        case 1: return "crown.fill"
-        case 2: return "medal.fill"
-        case 3: return "trophy.fill"
-        default: return "star.fill"
-        }
     }
 }
 
@@ -214,7 +223,7 @@ private struct LeaderboardRow: View {
         HStack(spacing: RFSpacing.md) {
             Text("\(entry.rank)")
                 .font(.system(size: 14, weight: .black))
-                .foregroundStyle(rankAccent)
+                .foregroundStyle(entry.rankColor)
                 .frame(width: 32, alignment: .leading)
 
             AvatarView(seed: entry.avatarSeed, size: 40)
@@ -259,18 +268,9 @@ private struct LeaderboardRow: View {
         .rfCardStyle(cornerRadius: 18)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isCurrentUser ? RFColor.primary.opacity(0.6) : .clear, lineWidth: isCurrentUser ? 1.5 : 0)
+                .stroke(isCurrentUser ? entry.rankColor.opacity(0.6) : .clear, lineWidth: isCurrentUser ? 1.5 : 0)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Rank \(entry.rank): \(entry.displayName), \(entry.points) XP")
-    }
-
-    private var rankAccent: Color {
-        switch entry.rank {
-        case 1: return RFColor.primary
-        case 2: return RFColor.outline
-        case 3: return RFColor.primaryDeep
-        default: return RFColor.onSurfaceVariant.opacity(0.5)
-        }
     }
 }

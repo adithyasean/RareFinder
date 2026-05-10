@@ -208,3 +208,89 @@ struct HeroIconArt: View {
         .accessibilityHidden(true)
     }
 }
+
+struct CategoryChip: View {
+    let title: String
+    let isActive: Bool
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            ChipLabel(title: title, isActive: isActive)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+}
+
+struct ChipLabel: View {
+    let title: String
+    let isActive: Bool
+    var body: some View {
+        Text(title)
+            .font(.system(size: 13, weight: .heavy))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .foregroundStyle(isActive ? .white : RFColor.onSurfaceVariant)
+            .background(
+                Capsule().fill(isActive ? AnyShapeStyle(RFColor.primaryGradient) : AnyShapeStyle(Color.white))
+            )
+            .overlay(Capsule().stroke(isActive ? RFColor.primary : RFColor.outlineVariant.opacity(0.3), lineWidth: 1))
+    }
+}
+
+enum RFToolbarOption: String, CaseIterable, Identifiable {
+    case notifications = "Notifications"
+    case settings = "Settings"
+    case rewards = "Rewards"
+    case leaderboard = "Leaderboard"
+    case moderator = "Moderator"
+    
+    var id: String { rawValue }
+    
+    var symbol: String {
+        switch self {
+        case .notifications: return "bell"
+        case .settings: return "gearshape"
+        case .rewards: return "gift"
+        case .leaderboard: return "trophy"
+        case .moderator: return "checkmark.shield"
+        }
+    }
+    
+    @ViewBuilder
+    var destination: some View {
+        switch self {
+        case .notifications: NotificationsView()
+        case .settings: SettingsView()
+        case .rewards: RewardsStoreView()
+        case .leaderboard: LeaderboardView()
+        case .moderator: ModeratorView()
+        }
+    }
+}
+
+extension View {
+    func rfUnifiedToolbar(primary: RFToolbarOption, isModerator: Bool) -> some View {
+        self.toolbar {
+            // Priority action - visible directly in the toolbar
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(destination: primary.destination) {
+                    Image(systemName: primary.symbol)
+                }
+                .accessibilityLabel(primary.rawValue)
+            }
+            
+            // Secondary actions - automatically grouped into the "More" menu by iOS
+            ToolbarItemGroup(placement: .secondaryAction) {
+                ForEach(RFToolbarOption.allCases) { option in
+                    if option != primary && (option != .moderator || isModerator) {
+                        NavigationLink(destination: option.destination) {
+                            Label(option.rawValue, systemImage: option.symbol)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

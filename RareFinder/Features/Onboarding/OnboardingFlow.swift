@@ -262,55 +262,132 @@ private struct OnboardingAuth: View {
     @State private var showSignup = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RFSpacing.lg) {
-            Spacer(minLength: RFSpacing.xl)
-
-            VStack(alignment: .center, spacing: RFSpacing.sm) {
-                HeroIconArt(symbol: "dot.radiowaves.left.and.right", palette: [RFColor.primary, RFColor.primaryDeep])
-                    .frame(width: 140, height: 140)
-                    .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 36, style: .continuous)
-                            .stroke(RFColor.outlineVariant.opacity(0.3), lineWidth: 1)
-                    )
+        VStack(spacing: 0) {
+            // Skip button
+            HStack {
+                Spacer()
+                Button("Skip") {
+                    onFinish()
+                }
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(RFColor.primary)
+                .padding(.top, RFSpacing.md)
+                .padding(.trailing, RFSpacing.lg)
             }
-            .frame(maxWidth: .infinity)
 
-            VStack(alignment: .leading, spacing: RFSpacing.sm) {
-                Eyebrow(text: "Join The Grid", color: RFColor.primary)
-                Text("Welcome, Hunter")
-                    .font(.system(size: 38, weight: .black))
-                    .foregroundStyle(RFColor.onSurface)
-                Text("Sign up or log in to sync verifications, earn reputation, and unlock tier-gated rewards.")
-                    .font(.rfBody())
+            Spacer(minLength: RFSpacing.lg)
+
+            // Icon & Titles
+            VStack(spacing: RFSpacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous)
+                        .fill(RFColor.primary.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "touchid")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundStyle(RFColor.primary)
+                }
+                
+                VStack(spacing: 4) {
+                    Text("Rare Finder")
+                        .font(.system(size: 22, weight: .black))
+                        .foregroundStyle(RFColor.onSurface)
+                    
+                    Text("Your Journey\nBegins")
+                        .font(.system(size: 44, weight: .black))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(RFColor.onSurface)
+                        .lineSpacing(-4)
+                }
+
+                Text("Create an account to start tracking your\ntrust score and contributing to the network.")
+                    .font(.rfBody(16))
                     .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, RFSpacing.xl)
             }
-            .padding(.horizontal, RFSpacing.lg)
 
             Spacer()
 
-            VStack(spacing: RFSpacing.sm) {
-                // "Continue with Apple" is treated as guest finish so the
-                // existing UI snapshot tests stay green. Real auth lives
-                // behind the dedicated Sign Up / Log In buttons below.
-                RFDarkButton(title: "Continue with Apple", icon: "apple.logo", action: onFinish)
-                RFPrimaryButton(title: "Sign Up With Email", icon: "envelope.fill") {
-                    showSignup = true
-                }
-                RFSecondaryButton(title: "Log In", icon: "key.fill") {
-                    showLogin = true
-                }
+            // Buttons
+            VStack(spacing: RFSpacing.md) {
+                // Apple Button
                 Button(action: onFinish) {
-                    Text("Continue As Guest")
-                        .font(.system(size: 11, weight: .black))
-                        .tracking(2)
-                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
-                        .padding(.top, 8)
+                    HStack(spacing: 12) {
+                        Image(systemName: "apple.logo")
+                            .font(.system(size: 20))
+                        Text("Continue with Apple")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .foregroundStyle(.white)
+                    .background(RFColor.onSurface, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("onboarding_guest")
+
+                // Google Button
+                Button(action: {}) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "globe") // Placeholder
+                            .font(.system(size: 18))
+                            .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
+                        Text("Continue with Google")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .foregroundStyle(RFColor.onSurface)
+                    .background(
+                        RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous)
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous)
+                            .stroke(RFColor.outlineVariant.opacity(0.3), lineWidth: 1)
+                    )
+                }
+
+                // OR separator
+                HStack(spacing: 16) {
+                    Rectangle()
+                        .fill(RFColor.outlineVariant.opacity(0.3))
+                        .frame(height: 1)
+                    Text("OR")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                    Rectangle()
+                        .fill(RFColor.outlineVariant.opacity(0.3))
+                        .frame(height: 1)
+                }
+                .padding(.vertical, RFSpacing.sm)
+
+                // Email Button
+                Button(action: { showSignup = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "envelope.fill")
+                        Text("Sign up with Email")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .foregroundStyle(.white)
+                    .background(RFColor.primaryGradient, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
+                }
             }
             .padding(.horizontal, RFSpacing.lg)
+
+            Spacer(minLength: RFSpacing.xl)
+
+            // Footer
+            HStack(spacing: 4) {
+                Text("Already have an account?")
+                    .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.8))
+                Button("Log In") {
+                    showLogin = true
+                }
+                .foregroundStyle(RFColor.primary)
+                .fontWeight(.bold)
+            }
+            .font(.rfBody(15))
             .padding(.bottom, RFSpacing.xl)
         }
         .sheet(isPresented: $showLogin) {
@@ -341,6 +418,8 @@ private struct OnboardingAuth: View {
         }
     }
 }
+
+
 
 #Preview {
     OnboardingFlow()
