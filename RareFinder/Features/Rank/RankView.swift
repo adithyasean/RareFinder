@@ -28,39 +28,7 @@ struct RankView: View {
             }
             .background(RFColor.surface)
             .navigationTitle("Hunter Profile")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                    }
-                    .accessibilityLabel("Settings")
-                }
-                ToolbarItem(placement: .secondaryAction) {
-                    NavigationLink {
-                        RewardsStoreView()
-                    } label: {
-                        Label("Rewards", systemImage: "gift.fill")
-                    }
-                }
-                ToolbarItem(placement: .secondaryAction) {
-                    NavigationLink {
-                        LeaderboardView()
-                    } label: {
-                        Label("Leaderboard", systemImage: "trophy.fill")
-                    }
-                }
-                if profile?.isModerator == true {
-                    ToolbarItem(placement: .secondaryAction) {
-                        NavigationLink {
-                            ModeratorView()
-                        } label: {
-                            Label("Moderator", systemImage: "checkmark.shield.fill")
-                        }
-                    }
-                }
-            }
+            .rfUnifiedToolbar(primary: .settings, isModerator: profile?.isModerator == true)
         }
     }
 

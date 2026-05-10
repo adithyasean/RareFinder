@@ -5,6 +5,7 @@ struct RadarView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppState.self) private var appState
     @Query(sort: [SortDescriptor(\Bounty.intelScore, order: .reverse)]) private var bounties: [Bounty]
+    @Query private var profiles: [HunterProfile]
     @State private var searchText: String = ""
     @State private var selectedCategory: BountyCategory? = nil
 
@@ -43,20 +44,7 @@ struct RadarView: View {
             .navigationDestination(for: BountyCategory.self) { cat in
                 CategoriesView(preselected: cat)
             }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell.fill")
-                    }
-                    .accessibilityLabel("Notifications")
-                }
-                ToolbarItem(placement: .secondaryAction) {
-                    NavigationLink(destination: CategoriesView()) {
-                        Label("Categories", systemImage: "square.grid.2x2.fill")
-                    }
-                    .accessibilityLabel("Categories")
-                }
-            }
+            .rfUnifiedToolbar(primary: .notifications, isModerator: profiles.first?.isModerator == true)
         }
     }
 
