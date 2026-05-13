@@ -1,4 +1,5 @@
 import SwiftUI
+import LocalAuthentication
 
 /// Authentication flow supporting Password-based login and OTP-based signup/reset.
 struct AuthView: View {
@@ -13,7 +14,7 @@ struct AuthView: View {
     /// Callback after a successful login/signup. Defaults to dismiss.
     var onAuthenticated: (() -> Void)?
 
-    @State private var mode: AuthService.Mode = .login
+    @State private var mode: AuthService.Mode = .signup
     @State private var step: Step = .initial
     @State private var identifier: String = ""
     @State private var displayName: String = ""
@@ -21,118 +22,147 @@ struct AuthView: View {
     @State private var confirmPassword: String = ""
     @State private var code: String = ""
     @State private var isWorking: Bool = false
+    @State private var showEmailFields: Bool = false
     @State private var error: String?
     @State private var info: String?
+    
+    /// Whether to show a 'Close' button when at the initial step.
+    private var showCloseButton: Bool
+    private var wasSocialSkipped: Bool
+    private var customHeader: AnyView?
 
-    init(mode: AuthService.Mode? = nil, onAuthenticated: (() -> Void)? = nil) {
+    init(mode: AuthService.Mode? = nil, skipSocial: Bool = false, showCloseButton: Bool = true, customHeader: AnyView? = nil, onAuthenticated: (() -> Void)? = nil) {
         self.fixedMode = mode
         self.onAuthenticated = onAuthenticated
-        self._mode = State(initialValue: mode ?? .login)
+        self.showCloseButton = showCloseButton
+        self.wasSocialSkipped = skipSocial
+        self.customHeader = customHeader
+        self._mode = State(initialValue: mode ?? .signup)
+        // If we have a fixed mode and aren't skipping social, we still start at landing.
+        // But if we skip social (onboarding), we show fields immediately.
+        self._showEmailFields = State(initialValue: skipSocial)
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: RFSpacing.lg) {
-                header
-
-                if fixedMode == nil && step == .initial {
-                    Picker("Mode", selection: $mode) {
-                        Text("Log In").tag(AuthService.Mode.login)
-                        Text("Sign Up").tag(AuthService.Mode.signup)
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: mode) { _, _ in resetFlow() }
-                }
-
-                switch step {
-                case .initial:
-                    if mode == .login {
-                        loginForm
-                    } else if mode == .signup {
-                        signupForm
+                if !isEmbedded {
+                    if let customHeader {
+                        customHeader
                     } else {
-                        resetRequestForm
+                        AuthHeader(mode: fixedMode ?? .signup)
                     }
-                case .code:
-                    codeForm
                 }
 
-                if let error {
-                    Text(error)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("auth_error")
-                }
-                if let info {
-                    Text(info)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.green)
+                if step == .initial && !showEmailFields {
+                    landingContent
                 }
             }
             .padding(RFSpacing.lg)
         }
         .background(RFColor.surface.ignoresSafeArea())
         .navigationTitle(navigationTitle)
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
         .toolbar {
-            if step == .code || mode == .resetPassword {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Back") {
-                        if step == .code {
-                            step = .initial
-                        } else {
-                            mode = .login
-                            resetFlow()
-                        }
+            ToolbarItem(placement: .cancellationAction) {
+                if !showEmailFields && step == .initial && showCloseButton {
+                    Button("Close") {
+                        dismiss()
                     }
                 }
             }
         }
+        .navigationDestination(isPresented: $showEmailFields) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: RFSpacing.lg) {
+                    AuthHeader(mode: mode)
+                    
+                    switch step {
+                    case .initial:
+                        if mode == .login {
+                            loginForm
+                        } else if mode == .signup {
+                            signupForm
+                        } else {
+                            resetRequestForm
+                        }
+                    case .code:
+                        codeForm
+                    }
+                    
+                    authStatusMessages
+                }
+                .padding(RFSpacing.lg)
+            }
+            .navigationTitle(mode == .signup ? "Sign Up" : (mode == .login ? "Log In" : "Reset Password"))
+            .background(RFColor.surface.ignoresSafeArea())
+        }
+    }
+
+    @ViewBuilder
+    private var landingContent: some View {
+        VStack(alignment: .leading, spacing: RFSpacing.lg) {
+            SocialLoginSection(onAuthenticated: finishAuthentication)
+            
+            HStack(spacing: 16) {
+                Rectangle().fill(RFColor.outlineVariant.opacity(0.3)).frame(height: 1)
+                Text("OR").font(.system(size: 11, weight: .black)).foregroundStyle(RFColor.onSurfaceVariant.opacity(0.4))
+                Rectangle().fill(RFColor.outlineVariant.opacity(0.3)).frame(height: 1)
+            }
+            .padding(.vertical, RFSpacing.sm)
+            
+            // Continue with Email Button
+            Button {
+                withAnimation { showEmailFields = true }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "envelope.fill")
+                    Text((fixedMode ?? .signup) == .login ? "Log in with Email" : "Sign up with Email")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .foregroundStyle(.white)
+                .background(RFColor.primaryGradient, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
+            }
+            
+            AuthFooter(mode: fixedMode ?? .signup) { newMode in
+                withAnimation {
+                    mode = newMode
+                    showEmailFields = true 
+                }
+            }
+            
+            authStatusMessages
+        }
+    }
+
+    @ViewBuilder
+    private var authStatusMessages: some View {
+        VStack(alignment: .leading, spacing: RFSpacing.sm) {
+            if let error {
+                Text(error)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("auth_error")
+            }
+            if let info {
+                Text(info)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.green)
+            }
+        }
+    }
+
+    private var isEmbedded: Bool {
+        fixedMode != nil
     }
 
     private var navigationTitle: String {
+        if customHeader != nil { return "" }
         if fixedMode != nil {
             return mode == .signup ? "Sign Up" : (mode == .login ? "Log In" : "Reset Password")
         }
         return "Account"
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: RFSpacing.sm) {
-            Eyebrow(text: headerEyebrow, color: RFColor.primary)
-            Text(headerTitle)
-                .font(.system(size: 28, weight: .black))
-                .foregroundStyle(RFColor.onSurface)
-            Text(headerSubtitle)
-                .font(.rfBody())
-                .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
-        }
-    }
-
-    private var headerEyebrow: String {
-        switch mode {
-        case .signup: return "Join The Grid"
-        case .login: return "Welcome Back"
-        case .resetPassword: return "Security"
-        }
-    }
-
-    private var headerTitle: String {
-        switch mode {
-        case .signup: return "Create your hunter ID"
-        case .login: return "Authenticate to sync"
-        case .resetPassword: return "Reset Password"
-        }
-    }
-
-    private var headerSubtitle: String {
-        switch mode {
-        case .signup: return "Enter your details. We'll verify your email with a one-time code."
-        case .login: return "Enter your credentials to access your profile."
-        case .resetPassword: return "Enter your email to receive a reset code."
-        }
     }
 
     @ViewBuilder
@@ -171,6 +201,7 @@ struct AuthView: View {
             }
         }
     }
+
 
     @ViewBuilder
     private var signupForm: some View {
@@ -331,6 +362,158 @@ struct AuthView: View {
     @MainActor
     private func finishAuthentication() async {
         if let cb = onAuthenticated { cb() } else { dismiss() }
+    }
+}
+
+// MARK: - Subviews
+
+struct AuthHeader: View {
+    let mode: AuthService.Mode
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: RFSpacing.sm) {
+            Eyebrow(text: eyebrow, color: RFColor.primary)
+            Text(title)
+                .font(.system(size: 28, weight: .black))
+                .foregroundStyle(RFColor.onSurface)
+            Text(subtitle)
+                .font(.rfBody())
+                .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.75))
+        }
+    }
+    
+    private var eyebrow: String {
+        switch mode {
+        case .signup: return "Join The Grid"
+        case .login: return "Welcome Back"
+        case .resetPassword: return "Security"
+        }
+    }
+
+    private var title: String {
+        switch mode {
+        case .signup: return "Create your hunter ID"
+        case .login: return "Authenticate to sync"
+        case .resetPassword: return "Reset Password"
+        }
+    }
+
+    private var subtitle: String {
+        switch mode {
+        case .signup: return "Enter your details. We'll verify your email with a one-time code."
+        case .login: return "Enter your credentials to access your profile."
+        case .resetPassword: return "Enter your email to receive a reset code."
+        }
+    }
+}
+
+struct SocialLoginSection: View {
+    @Environment(AppState.self) private var appState
+    var onAuthenticated: () async -> Void
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: RFSpacing.md) {
+            if appState.auth.canUseBiometrics && appState.auth.biometricsEnabled {
+                Button {
+                    Task {
+                        do {
+                            try await appState.auth.authenticateWithBiometrics()
+                            await onAuthenticated()
+                        } catch {
+                            self.error = error.localizedDescription
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: appState.auth.biometricType == .faceID ? "faceid" : "touchid")
+                            .font(.system(size: 20))
+                        Text("Sign in with \(appState.auth.biometricType == .faceID ? "FaceID" : "TouchID")")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .foregroundStyle(.white)
+                    .background(RFColor.primaryGradient, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
+                }
+            }
+
+            Button {
+                Task {
+                    do {
+                        try await appState.auth.loginWithApple()
+                        await onAuthenticated()
+                    } catch {
+                        self.error = error.localizedDescription
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "apple.logo")
+                        .font(.system(size: 20))
+                    Text("Continue with Apple")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .foregroundStyle(.white)
+                .background(RFColor.onSurface, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
+            }
+
+            Button {
+                Task {
+                    do {
+                        try await appState.auth.loginWithApple()
+                        await onAuthenticated()
+                    } catch {
+                        self.error = error.localizedDescription
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 18))
+                        .foregroundStyle(RFColor.onSurfaceVariant.opacity(0.6))
+                    Text("Continue with Google")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .foregroundStyle(RFColor.onSurface)
+                .background(
+                    RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous)
+                        .stroke(RFColor.outlineVariant.opacity(0.3), lineWidth: 1)
+                )
+            }
+            
+            if let error {
+                Text(error).font(.system(size: 12)).foregroundStyle(.red)
+            }
+        }
+    }
+}
+
+struct AuthFooter: View {
+    let mode: AuthService.Mode
+    var onToggle: (AuthService.Mode) -> Void
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text(mode == .login ? "New here?" : "Already have an account?")
+                .foregroundStyle(RFColor.onSurfaceVariant)
+            Button(mode == .login ? "Sign Up" : "Log In") {
+                onToggle(mode == .login ? .signup : .login)
+            }
+            .foregroundStyle(RFColor.primary)
+            .fontWeight(.bold)
+            .accessibilityIdentifier(mode == .login ? "auth_switch_to_signup" : "auth_switch_to_login")
+            Spacer()
+        }
+        .font(.system(size: 14))
+        .padding(.top, RFSpacing.sm)
     }
 }
 

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import LocalAuthentication
 
 /// OTP-based authentication. The backend returns the OTP in the
 /// /auth/request-otp response so the iOS client can immediately schedule
@@ -21,12 +22,16 @@ final class AuthService {
     enum AuthError: LocalizedError {
         case invalidIdentifier
         case invalidCode
+        case biometricNotAvailable
+        case biometricFailed
         case backend(String)
 
         var errorDescription: String? {
             switch self {
             case .invalidIdentifier: return "Enter a valid email or username."
             case .invalidCode: return "Invalid or expired code."
+            case .biometricNotAvailable: return "Biometric authentication is not available on this device."
+            case .biometricFailed: return "Biometric authentication failed."
             case .backend(let m): return m
             }
         }
@@ -34,11 +39,29 @@ final class AuthService {
 
     private let tokenKey = "rf.authToken"
     private let sessionKey = "rf.authSession"
+    private let biometricsEnabledKey = "rf.biometricsEnabled"
 
     private(set) var session: Session?
     private(set) var pendingOTP: String?
     private(set) var lastIssuedEmail: String?
     private(set) var lastError: String?
+
+    var biometricsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: biometricsEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: biometricsEnabledKey) }
+    }
+
+    var canUseBiometrics: Bool {
+        let context = LAContext()
+        var error: NSError?
+        return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+    }
+
+    var biometricType: LABiometryType {
+        let context = LAContext()
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        return context.biometryType
+    }
 
     var isAuthenticated: Bool { session != nil }
 
@@ -144,6 +167,36 @@ final class AuthService {
         session = nil
         pendingOTP = nil
         persist(nil)
+    }
+
+    /// Mock Apple Login for the coursework demo.
+    /// In a real app, this would use ASAuthorizationAppleIDProvider.
+    func loginWithApple() async throws {
+        // For the demo, we'll log in as the default 'Adithya' account.
+        // This ensures the user can see moderator features as requested.
+        try await login(identifier: "adithya", password: "password123")
+    }
+
+    /// Authenticates using FaceID or TouchID. This doesn't hit the backend,
+    /// it just unlocks the already-persisted session tokens.
+    func authenticateWithBiometrics() async throws {
+        guard canUseBiometrics else {
+            throw AuthError.biometricNotAvailable
+        }
+        
+        let context = LAContext()
+        do {
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: "Authenticate to access your hunter profile."
+            )
+            if !success { throw AuthError.biometricFailed }
+            
+            // Reload the session to ensure UI updates.
+            self.session = Self.loadSession()
+        } catch {
+            throw AuthError.biometricFailed
+        }
     }
 }
 

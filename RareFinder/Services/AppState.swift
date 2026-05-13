@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import SwiftData
+import UIKit
 
 /// Central observable state shared through the environment.
 @Observable
@@ -68,5 +69,21 @@ final class AppState {
             try? context.delete(model: type)
         }
         try? context.save()
+    }
+
+    /// Triggers haptic feedback if enabled in accessibility settings.
+    func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        guard accessibility.hapticFeedback else { return }
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+
+    /// Triggers a notification-style haptic (success, warning, error).
+    func hapticNotification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        guard accessibility.hapticFeedback else { return }
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(type)
     }
 }

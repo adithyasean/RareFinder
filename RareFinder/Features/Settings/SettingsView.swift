@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import LocalAuthentication
 import CoreLocation
 
 struct SettingsView: View {
@@ -66,19 +67,39 @@ struct SettingsView: View {
 
             Section {
                 Toggle(isOn: Binding(
-                    get: { profile?.isModerator ?? false },
-                    set: { newValue in
-                        profile?.isModerator = newValue
-                        try? context.save()
-                    }
+                    get: { appState.auth.biometricsEnabled },
+                    set: { appState.auth.biometricsEnabled = $0 }
                 )) {
-                    Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                    Label(
+                        appState.auth.biometricType == .faceID ? "Use FaceID" : "Use TouchID",
+                        systemImage: appState.auth.biometricType == .faceID ? "faceid" : "touchid"
+                    )
                 }
+                .disabled(!appState.auth.canUseBiometrics)
             } header: {
-                Text("Developer")
+                Text("Security")
             } footer: {
-                Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
+                Text("Secure your hunter profile using biometric authentication.")
                     .font(.caption)
+            }
+
+            if profile?.isModerator == true {
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { profile?.isModerator ?? false },
+                        set: { newValue in
+                            profile?.isModerator = newValue
+                            try? context.save()
+                        }
+                    )) {
+                        Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                    }
+                } header: {
+                    Text("Developer")
+                } footer: {
+                    Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
+                        .font(.caption)
+                }
             }
 
             Section("About") {

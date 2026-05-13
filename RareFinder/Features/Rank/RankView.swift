@@ -80,11 +80,6 @@ struct RankView: View {
                             showAuthSheet = false
                             Task { await appState.sync.syncAll(context: context) }
                         }
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Close") { showAuthSheet = false }
-                            }
-                        }
                     }
                 }
             }

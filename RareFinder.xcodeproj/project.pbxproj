@@ -402,6 +402,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Attach a photo to your intel report as proof of the scarce item you observed.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Rare Finder uses your location in the background to alert you when a requested item is detected inside a geofenced bounty zone.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Rare Finder uses your location to surface nearby bounties, verify reports, and alert you when a requested item is detected nearby.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Rare Finder uses FaceID to securely unlock your hunter profile and trust score.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select a photo to attach as proof to your intel report.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

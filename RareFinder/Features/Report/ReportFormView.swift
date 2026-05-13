@@ -254,6 +254,7 @@ struct ReportFormView: View {
             // backend state (new bounty, new report, updated counters,
             // updated hunter balance).
             await appState.sync.syncAll(context: context)
+            appState.hapticNotification(.success)
             await appState.notifications.scheduleVicinityAlert(
                 title: "Intel logged",
                 body: "You earned +\(response.points_awarded) Trust XP. Thanks, hunter.",
