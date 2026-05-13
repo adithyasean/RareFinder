@@ -76,6 +76,7 @@ struct DetailView: View {
         }
 
         withAnimation { scannerToast = "Scanner armed for \(bounty.district)" }
+        appState.hapticFeedback(.medium)
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
             withAnimation { scannerToast = nil }
         }
@@ -286,6 +287,7 @@ struct DetailView: View {
         do {
             let response = try await appState.sync.client.submitReport(request)
             await appState.sync.syncAll(context: context)
+            appState.hapticNotification(.success)
             UserDefaults.standard.set(true, forKey: verifyKey)
             isClaimed = true
             showToast("Verified — +\(response.points_awarded) Trust Points awarded.")

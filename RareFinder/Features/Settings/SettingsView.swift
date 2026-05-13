@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import LocalAuthentication
 import CoreLocation
 
 struct SettingsView: View {
@@ -9,8 +10,6 @@ struct SettingsView: View {
     @AppStorage("rf.useMetricDistance") private var useMetric = true
     @AppStorage("rf.ghostMode") private var ghostMode = false
     @AppStorage("rf.highFrequencyAlerts") private var highFrequency = true
-    @State private var showAuthSheet = false
-    @State private var authMode: AuthService.Mode = .login
 
     private var profile: HunterProfile? { profiles.first }
 
@@ -66,19 +65,57 @@ struct SettingsView: View {
 
             Section {
                 Toggle(isOn: Binding(
-                    get: { profile?.isModerator ?? false },
-                    set: { newValue in
-                        profile?.isModerator = newValue
-                        try? context.save()
-                    }
+                    get: { appState.auth.biometricsEnabled },
+                    set: { appState.auth.biometricsEnabled = $0 }
                 )) {
-                    Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                    Label(
+                        appState.auth.biometricType == .faceID ? "Use FaceID" : "Use TouchID",
+                        systemImage: appState.auth.biometricType == .faceID ? "faceid" : "touchid"
+                    )
                 }
+                .disabled(!appState.auth.canUseBiometrics || !appState.auth.isAuthenticated)
             } header: {
-                Text("Developer")
+                Text("Security")
             } footer: {
-                Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Secure your hunter profile using biometric authentication.")
+                    
+                    if !appState.auth.isAuthenticated {
+                        Text("Sign in to enable biometrics.")
+                            .foregroundStyle(.orange)
+                    } else {
+                        switch appState.auth.biometricStatus {
+                        case .notEnrolled:
+                            Text("\(appState.auth.biometricType == .faceID ? "FaceID" : "TouchID") is not enrolled on this device.")
+                                .foregroundStyle(.red)
+                        case .notAvailable:
+                            Text("\(appState.auth.biometricType == .faceID ? "FaceID" : "TouchID") is not available.")
+                                .foregroundStyle(.red)
+                        case .available:
+                            EmptyView()
+                        }
+                    }
+                }
+                .font(.caption)
+            }
+
+            if profile?.isModerator == true {
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { profile?.isModerator ?? false },
+                        set: { newValue in
+                            profile?.isModerator = newValue
+                            try? context.save()
+                        }
+                    )) {
+                        Label("Moderator mode", systemImage: "checkmark.shield.fill")
+                    }
+                } header: {
+                    Text("Developer")
+                } footer: {
+                    Text("Unlocks the Moderator dashboard from the Hunter Profile toolbar.")
+                        .font(.caption)
+                }
             }
 
             Section("About") {
@@ -106,19 +143,6 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .sheet(isPresented: $showAuthSheet) {
-            NavigationStack {
-                AuthView(mode: authMode) {
-                    showAuthSheet = false
-                    Task { await appState.sync.syncAll(context: context) }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { showAuthSheet = false }
-                    }
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -151,20 +175,6 @@ struct SettingsView: View {
                     Spacer()
                     Text("Guest").foregroundStyle(.secondary)
                 }
-                Button {
-                    authMode = .login
-                    showAuthSheet = true
-                } label: {
-                    Label("Log In", systemImage: "key.fill")
-                }
-                .accessibilityIdentifier("settings_login")
-                Button {
-                    authMode = .signup
-                    showAuthSheet = true
-                } label: {
-                    Label("Sign Up", systemImage: "person.crop.circle.badge.plus")
-                }
-                .accessibilityIdentifier("settings_signup")
             }
         }
     }
