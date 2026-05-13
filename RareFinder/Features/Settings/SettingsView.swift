@@ -10,8 +10,6 @@ struct SettingsView: View {
     @AppStorage("rf.useMetricDistance") private var useMetric = true
     @AppStorage("rf.ghostMode") private var ghostMode = false
     @AppStorage("rf.highFrequencyAlerts") private var highFrequency = true
-    @State private var showAuthSheet = false
-    @State private var authMode: AuthService.Mode = .login
 
     private var profile: HunterProfile? { profiles.first }
 
@@ -127,19 +125,6 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .sheet(isPresented: $showAuthSheet) {
-            NavigationStack {
-                AuthView(mode: authMode) {
-                    showAuthSheet = false
-                    Task { await appState.sync.syncAll(context: context) }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { showAuthSheet = false }
-                    }
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -172,20 +157,6 @@ struct SettingsView: View {
                     Spacer()
                     Text("Guest").foregroundStyle(.secondary)
                 }
-                Button {
-                    authMode = .login
-                    showAuthSheet = true
-                } label: {
-                    Label("Log In", systemImage: "key.fill")
-                }
-                .accessibilityIdentifier("settings_login")
-                Button {
-                    authMode = .signup
-                    showAuthSheet = true
-                } label: {
-                    Label("Sign Up", systemImage: "person.crop.circle.badge.plus")
-                }
-                .accessibilityIdentifier("settings_signup")
             }
         }
     }

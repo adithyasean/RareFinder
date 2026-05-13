@@ -50,7 +50,7 @@ struct AuthView: View {
                     if let customHeader {
                         customHeader
                     } else {
-                        AuthHeader(mode: fixedMode ?? .signup)
+                        AuthHeader(mode: mode)
                     }
                 }
 
@@ -96,6 +96,9 @@ struct AuthView: View {
             }
             .navigationTitle(mode == .signup ? "Sign Up" : (mode == .login ? "Log In" : "Reset Password"))
             .background(RFColor.surface.ignoresSafeArea())
+            .onDisappear {
+                mode = fixedMode ?? .signup
+            }
         }
     }
 
@@ -117,7 +120,7 @@ struct AuthView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "envelope.fill")
-                    Text((fixedMode ?? .signup) == .login ? "Log in with Email" : "Sign up with Email")
+                    Text(mode == .login ? "Log in with Email" : "Sign up with Email")
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity, minHeight: 56)
@@ -125,7 +128,7 @@ struct AuthView: View {
                 .background(RFColor.primaryGradient, in: RoundedRectangle(cornerRadius: RFRadius.md, style: .continuous))
             }
             
-            AuthFooter(mode: fixedMode ?? .signup) { newMode in
+            AuthFooter(mode: mode) { newMode in
                 withAnimation {
                     mode = newMode
                     showEmailFields = true 
