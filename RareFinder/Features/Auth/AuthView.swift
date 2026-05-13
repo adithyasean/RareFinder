@@ -19,7 +19,6 @@ struct AuthView: View {
     @State private var identifier: String = ""
     @State private var displayName: String = ""
     @State private var password: String = ""
-    @State private var confirmPassword: String = ""
     @State private var code: String = ""
     @State private var isWorking: Bool = false
     @State private var showEmailFields: Bool = false
@@ -28,14 +27,12 @@ struct AuthView: View {
     
     /// Whether to show a 'Close' button when at the initial step.
     private var showCloseButton: Bool
-    private var wasSocialSkipped: Bool
     private var customHeader: AnyView?
 
     init(mode: AuthService.Mode? = nil, skipSocial: Bool = false, showCloseButton: Bool = true, customHeader: AnyView? = nil, onAuthenticated: (() -> Void)? = nil) {
         self.fixedMode = mode
         self.onAuthenticated = onAuthenticated
         self.showCloseButton = showCloseButton
-        self.wasSocialSkipped = skipSocial
         self.customHeader = customHeader
         self._mode = State(initialValue: mode ?? .signup)
         // If we have a fixed mode and aren't skipping social, we still start at landing.
@@ -308,7 +305,6 @@ struct AuthView: View {
         step = .initial
         code = ""
         password = ""
-        confirmPassword = ""
         error = nil
         info = nil
     }
