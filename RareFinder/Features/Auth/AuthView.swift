@@ -413,7 +413,7 @@ struct SocialLoginSection: View {
 
     var body: some View {
         VStack(spacing: RFSpacing.md) {
-            if appState.auth.canUseBiometrics && appState.auth.biometricsEnabled {
+            if appState.auth.canUseBiometrics && appState.auth.biometricsEnabled && appState.auth.isSessionPersisted {
                 Button {
                     Task {
                         do {

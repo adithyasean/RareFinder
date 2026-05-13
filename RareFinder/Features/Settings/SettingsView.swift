@@ -73,12 +73,30 @@ struct SettingsView: View {
                         systemImage: appState.auth.biometricType == .faceID ? "faceid" : "touchid"
                     )
                 }
-                .disabled(!appState.auth.canUseBiometrics)
+                .disabled(!appState.auth.canUseBiometrics || !appState.auth.isAuthenticated)
             } header: {
                 Text("Security")
             } footer: {
-                Text("Secure your hunter profile using biometric authentication.")
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Secure your hunter profile using biometric authentication.")
+                    
+                    if !appState.auth.isAuthenticated {
+                        Text("Sign in to enable biometrics.")
+                            .foregroundStyle(.orange)
+                    } else {
+                        switch appState.auth.biometricStatus {
+                        case .notEnrolled:
+                            Text("\(appState.auth.biometricType == .faceID ? "FaceID" : "TouchID") is not enrolled on this device.")
+                                .foregroundStyle(.red)
+                        case .notAvailable:
+                            Text("\(appState.auth.biometricType == .faceID ? "FaceID" : "TouchID") is not available.")
+                                .foregroundStyle(.red)
+                        case .available:
+                            EmptyView()
+                        }
+                    }
+                }
+                .font(.caption)
             }
 
             if profile?.isModerator == true {

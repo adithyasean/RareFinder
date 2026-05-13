@@ -51,18 +51,35 @@ final class SyncService {
         do {
             async let bounties = client.fetchBounties()
             async let reports = client.fetchReports()
-            async let hunter = client.fetchHunter()
             async let rewards = client.fetchRewards()
             async let notifs = client.fetchNotifications()
-            async let flags = client.fetchFlags()
 
-            let (b, r, h, rw, n, f) = try await (bounties, reports, hunter, rewards, notifs, flags)
+            // Only fetch personal data if we have a token.
+            // If fetchHunter or fetchFlags fails with 401, we treat the user as a Guest.
+            var hunterDTO: BackendClient.HunterDTO?
+            var flagDTOs: [BackendClient.ModerationFlagDTO] = []
+            
+            if UserDefaults.standard.string(forKey: "rf.authToken") != nil {
+                hunterDTO = try? await client.fetchHunter()
+                flagDTOs = (try? await client.fetchFlags()) ?? []
+            }
+
+            let (b, r, rw, n) = try await (bounties, reports, rewards, notifs)
+
             try mergeBounties(b, context: context)
             try mergeReports(r, context: context)
-            try mergeHunter(h, context: context)
             try mergeRewards(rw, context: context)
             try mergeNotifications(n, context: context)
-            try mergeFlags(f, context: context)
+            
+            // If we have a hunter, merge them; otherwise, ensure local profiles are cleared
+            // if the user is a Guest.
+            if let h = hunterDTO {
+                try mergeHunter(h, context: context)
+                try mergeFlags(flagDTOs, context: context)
+            } else {
+                try clearLocalProfile(context: context)
+            }
+
             try purgeOrphans(context: context)
             try context.save()
             status = .synced(.now)
@@ -71,6 +88,13 @@ final class SyncService {
             status = .offline(error.localizedDescription)
             connection = .offline(error.localizedDescription)
         }
+    }
+
+    private func clearLocalProfile(context: ModelContext) throws {
+        let profiles = try context.fetch(FetchDescriptor<HunterProfile>())
+        for p in profiles { context.delete(p) }
+        let flags = try context.fetch(FetchDescriptor<ModerationFlag>())
+        for f in flags { context.delete(f) }
     }
 
     // MARK: - Merge helpers

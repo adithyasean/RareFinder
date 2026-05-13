@@ -23,6 +23,7 @@ final class AuthService {
         case invalidIdentifier
         case invalidCode
         case biometricNotAvailable
+        case biometricNotEnrolled
         case biometricFailed
         case backend(String)
 
@@ -31,10 +32,17 @@ final class AuthService {
             case .invalidIdentifier: return "Enter a valid email or username."
             case .invalidCode: return "Invalid or expired code."
             case .biometricNotAvailable: return "Biometric authentication is not available on this device."
+            case .biometricNotEnrolled: return "Biometrics not set up. Please enroll in System Settings."
             case .biometricFailed: return "Biometric authentication failed."
             case .backend(let m): return m
             }
         }
+    }
+
+    enum BiometricStatus {
+        case available
+        case notEnrolled
+        case notAvailable
     }
 
     private let tokenKey = "rf.authToken"
@@ -52,15 +60,39 @@ final class AuthService {
     }
 
     var canUseBiometrics: Bool {
+        biometricStatus == .available
+    }
+
+    var biometricStatus: BiometricStatus {
         let context = LAContext()
         var error: NSError?
-        return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        let canEvaluate = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        
+        if canEvaluate {
+            return .available
+        }
+        
+        if let laError = error as? LAError {
+            switch laError.code {
+            case .biometryNotEnrolled:
+                return .notEnrolled
+            case .biometryNotAvailable:
+                return .notAvailable
+            default:
+                return .notAvailable
+            }
+        }
+        return .notAvailable
     }
 
     var biometricType: LABiometryType {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
         return context.biometryType
+    }
+
+    var isSessionPersisted: Bool {
+        UserDefaults.standard.data(forKey: sessionKey) != nil
     }
 
     var isAuthenticated: Bool { session != nil }
@@ -193,7 +225,10 @@ final class AuthService {
             if !success { throw AuthError.biometricFailed }
             
             // Reload the session to ensure UI updates.
-            self.session = Self.loadSession()
+            guard let loaded = Self.loadSession() else {
+                throw AuthError.biometricFailed
+            }
+            self.session = loaded
         } catch {
             throw AuthError.biometricFailed
         }
