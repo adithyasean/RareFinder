@@ -38,6 +38,7 @@ The app supports several launch arguments for development and UI testing:
 
 - `-RFUITestsReset`: Resets `UserDefaults` (onboarding and auth session) on launch.
 - `-RFUITestsSkipOnboarding`: Forces the app to skip the onboarding flow and show the main tab view.
+- `-RFUITestsResetAccessibility`: Clears persisted accessibility overrides (bold text, contrast, text size, etc.) before launch.
 
 To set these in Xcode:
 1.  Click on the Scheme (RareFinder) > **Edit Scheme...**

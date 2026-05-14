@@ -24,6 +24,9 @@ struct RareFinderApp: App {
         if args.contains("-RFUITestsSkipOnboarding") {
             UserDefaults.standard.set(true, forKey: "rf.onboardingComplete")
         }
+        if args.contains("-RFUITestsResetAccessibility") {
+            AccessibilitySettings.resetPersistedOverrides()
+        }
         _appState = State(initialValue: AppState())
     }
 
@@ -48,6 +51,7 @@ struct RareFinderApp: App {
         WindowGroup {
             RootView()
                 .environment(appState)
+                .environment(appState.accessibility)
         }
         .modelContainer(sharedModelContainer)
     }

@@ -1,5 +1,6 @@
 import Testing
 import CoreLocation
+import SwiftUI
 @testable import RareFinder
 
 // MARK: - EconomyService
@@ -254,5 +255,75 @@ struct BountyModeTests {
         let maxRadius = 60.0 / 2
         #expect(minRadius == 0.5)
         #expect(maxRadius == 30.0)
+    }
+}
+
+// MARK: - Accessibility
+
+@Suite("Accessibility settings")
+@MainActor
+struct AccessibilitySettingsTests {
+
+    @Test("enable all applies strongest overrides")
+    func enableAllTurnsOnOverrides() {
+        RareFinder.AccessibilitySettings.resetPersistedOverrides()
+        defer { RareFinder.AccessibilitySettings.resetPersistedOverrides() }
+
+        let settings = RareFinder.AccessibilitySettings()
+        settings.enableAll()
+
+        #expect(settings.boldText)
+        #expect(settings.highContrast)
+        #expect(settings.reduceMotion)
+        #expect(settings.voiceHints)
+        #expect(settings.hapticFeedback)
+        #expect(settings.textScale == .extraLarge)
+        #expect(settings.legibilityWeightOverride == .bold)
+        #expect(settings.contrastMultiplier == 1.3)
+        #expect(RareFinder.AccessibilitySettings.isBoldTextEnabled())
+        #expect(Font.rfBodyWeightForCurrentAccessibility == .bold)
+    }
+
+    @Test("reset all restores defaults")
+    func resetAllRestoresDefaults() {
+        RareFinder.AccessibilitySettings.resetPersistedOverrides()
+        defer { RareFinder.AccessibilitySettings.resetPersistedOverrides() }
+
+        let settings = RareFinder.AccessibilitySettings()
+        settings.enableAll()
+        settings.resetAll()
+
+        #expect(!settings.boldText)
+        #expect(!settings.highContrast)
+        #expect(!settings.reduceMotion)
+        #expect(!settings.voiceHints)
+        #expect(settings.hapticFeedback)
+        #expect(settings.textScale == .standard)
+        #expect(settings.legibilityWeightOverride == nil)
+        #expect(settings.contrastMultiplier == 1.0)
+        #expect(!RareFinder.AccessibilitySettings.isBoldTextEnabled())
+        #expect(Font.rfBodyWeightForCurrentAccessibility == .medium)
+    }
+
+    @Test("preferences persist across app relaunch")
+    func persistedSettingsReload() {
+        RareFinder.AccessibilitySettings.resetPersistedOverrides()
+        defer { RareFinder.AccessibilitySettings.resetPersistedOverrides() }
+
+        let initial = RareFinder.AccessibilitySettings()
+        initial.boldText = true
+        initial.highContrast = true
+        initial.reduceMotion = true
+        initial.voiceHints = true
+        initial.hapticFeedback = false
+        initial.textScale = RareFinder.AccessibilitySettings.TextScale.large
+
+        let reloaded = RareFinder.AccessibilitySettings()
+        #expect(reloaded.boldText)
+        #expect(reloaded.highContrast)
+        #expect(reloaded.reduceMotion)
+        #expect(reloaded.voiceHints)
+        #expect(!reloaded.hapticFeedback)
+        #expect(reloaded.textScale == .large)
     }
 }

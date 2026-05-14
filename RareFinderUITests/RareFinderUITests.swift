@@ -17,9 +17,9 @@ final class RareFinderUITests: XCTestCase {
 
     /// Launches the app with onboarding pre-completed so tests can exercise the
     /// main tab UI without driving through the onboarding flow on every run.
-    private func launchAppOnTabs() -> XCUIApplication {
+    private func launchAppOnTabs(extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-RFUITestsSkipOnboarding"]
+        app.launchArguments += ["-RFUITestsSkipOnboarding"] + extraArguments
         app.launch()
         return app
     }
