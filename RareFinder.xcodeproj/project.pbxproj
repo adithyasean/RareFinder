@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		89631F212FB62C0400BEB60A /* RareFinder.icon in Resources */ = {isa = PBXBuildFile; fileRef = 89631F202FB62C0400BEB60A /* RareFinder.icon */; };
+		89631F222FB62C0400BEB60A /* RareFinder.icon in Resources */ = {isa = PBXBuildFile; fileRef = 89631F202FB62C0400BEB60A /* RareFinder.icon */; };
+		89631F232FB62C0400BEB60A /* RareFinder.icon in Resources */ = {isa = PBXBuildFile; fileRef = 89631F202FB62C0400BEB60A /* RareFinder.icon */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		8980B4A12F9ABFCD00B23F66 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		89631F202FB62C0400BEB60A /* RareFinder.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = RareFinder.icon; sourceTree = "<group>"; };
 		8980B4912F9ABFCD00B23F66 /* RareFinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RareFinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8980B4A02F9ABFCD00B23F66 /* RareFinderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RareFinderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8980B4AA2F9ABFCD00B23F66 /* RareFinderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RareFinderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,6 +82,7 @@
 		8980B4882F9ABFCC00B23F66 = {
 			isa = PBXGroup;
 			children = (
+				89631F202FB62C0400BEB60A /* RareFinder.icon */,
 				8980B4932F9ABFCD00B23F66 /* RareFinder */,
 				8980B4A32F9ABFCD00B23F66 /* RareFinderTests */,
 				8980B4AD2F9ABFCD00B23F66 /* RareFinderUITests */,
@@ -212,6 +220,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				89631F212FB62C0400BEB60A /* RareFinder.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +228,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				89631F222FB62C0400BEB60A /* RareFinder.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,6 +236,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				89631F232FB62C0400BEB60A /* RareFinder.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,7 +399,7 @@
 		8980B4B52F9ABFCD00B23F66 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = RareFinder;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RareFinder/RareFinder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -399,10 +410,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rare Finder";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Attach a photo to your intel report as proof of the scarce item you observed.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Rare Finder uses FaceID to securely unlock your hunter profile and trust score.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Rare Finder uses your location in the background to alert you when a requested item is detected inside a geofenced bounty zone.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Rare Finder uses your location to surface nearby bounties, verify reports, and alert you when a requested item is detected nearby.";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Rare Finder uses FaceID to securely unlock your hunter profile and trust score.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Select a photo to attach as proof to your intel report.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -438,7 +450,7 @@
 		8980B4B62F9ABFCD00B23F66 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = RareFinder;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RareFinder/RareFinder.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -449,6 +461,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rare Finder";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Attach a photo to your intel report as proof of the scarce item you observed.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Rare Finder uses your location in the background to alert you when a requested item is detected inside a geofenced bounty zone.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Rare Finder uses your location to surface nearby bounties, verify reports, and alert you when a requested item is detected nearby.";

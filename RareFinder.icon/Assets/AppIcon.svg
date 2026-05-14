@@ -1,0 +1,93 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBFF"/>
+      <stop offset="100%" stop-color="#EADDFF"/>
+    </linearGradient>
+    
+    <filter id="elevation1" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#6750A4" flood-opacity="0.15"/>
+    </filter>
+    <filter id="elevation2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="10" dy="20" stdDeviation="30" flood-color="#6750A4" flood-opacity="0.25"/>
+    </filter>
+
+    <linearGradient id="gTable" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0F7FA"/>
+      <stop offset="100%" stop-color="#00BCD4"/>
+    </linearGradient>
+    <linearGradient id="gTLTri" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A7FFEB"/>
+      <stop offset="100%" stop-color="#1DE9B6"/>
+    </linearGradient>
+    <linearGradient id="gTRTri" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#84FFFF"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="gLQuad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1DE9B6"/>
+      <stop offset="100%" stop-color="#00B8D4"/>
+    </linearGradient>
+    <linearGradient id="gRQuad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0097A7"/>
+    </linearGradient>
+    <linearGradient id="gCTri" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00BCD4"/>
+      <stop offset="100%" stop-color="#00838F"/>
+    </linearGradient>
+    <linearGradient id="gLPav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B8D4"/>
+      <stop offset="100%" stop-color="#006064"/>
+    </linearGradient>
+    <linearGradient id="gCPav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0097A7"/>
+      <stop offset="100%" stop-color="#004D40"/>
+    </linearGradient>
+    <linearGradient id="gRPav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00838F"/>
+      <stop offset="100%" stop-color="#003840"/>
+    </linearGradient>
+
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#EADDFF" stop-opacity="0.2"/>
+    </linearGradient>
+    
+    <linearGradient id="handleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6750A4"/>
+      <stop offset="100%" stop-color="#381E72"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D0BCFF"/>
+      <stop offset="100%" stop-color="#6750A4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bgGrad)" />
+  
+  <circle cx="850" cy="150" r="450" fill="#D0BCFF" filter="blur(90px)" opacity="0.5" />
+  <circle cx="150" cy="850" r="450" fill="#A7FFEB" filter="blur(100px)" opacity="0.4" />
+
+  <g filter="url(#elevation1)" transform="translate(512, 512) rotate(15)">
+    <g stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round" stroke-opacity="0.4">
+      <polygon points="-160,10 -80,60 0,180" fill="url(#gLPav)" />
+      <polygon points="-80,60 80,60 0,180" fill="url(#gCPav)" />
+      <polygon points="80,60 160,10 0,180" fill="url(#gRPav)" />
+      <polygon points="-160,10 -110,-50 0,-20 -80,60" fill="url(#gLQuad)" />
+      <polygon points="160,10 110,-50 0,-20 80,60" fill="url(#gRQuad)" />
+      <polygon points="-80,60 0,-20 80,60" fill="url(#gCTri)" />
+      <polygon points="-160,10 -110,-50 -70,-90" fill="url(#gTLTri)" />
+      <polygon points="160,10 110,-50 70,-90" fill="url(#gTRTri)" />
+      <polygon points="-70,-90 70,-90 110,-50 0,-20 -110,-50" fill="url(#gTable)" />
+    </g>
+  </g>
+
+  <g filter="url(#elevation2)">
+    <line x1="688" y1="688" x2="880" y2="880" stroke="url(#handleGrad)" stroke-width="80" stroke-linecap="round" />
+    <circle cx="512" cy="512" r="250" fill="none" stroke="url(#ringGrad)" stroke-width="50" />
+    <circle cx="512" cy="512" r="225" fill="none" stroke="#FFFFFF" stroke-width="8" opacity="0.9"/>
+    <circle cx="512" cy="512" r="225" fill="url(#glass)" />
+    <path d="M 340 380 Q 512 280 684 380 Q 512 450 340 380 Z" fill="#FFFFFF" opacity="0.4" filter="blur(6px)" />
+  </g>
+</svg>
