@@ -92,20 +92,18 @@ final class AccessibilitySettings {
 
 /// SwiftUI modifier that applies the active accessibility overrides to
 /// the entire view hierarchy. Apply once near the root.
+///
+/// Avoids AnyView to preserve SwiftUI structural identity — toggling a
+/// setting won't destroy the view tree (which would reset navigation).
 struct AccessibilityOverridesModifier: ViewModifier {
     @Environment(AppState.self) private var appState
 
     func body(content: Content) -> some View {
         let a11y = appState.accessibility
-        // Only override when values differ from system defaults to avoid
-        // breaking SwiftUI sheet accessibility inertness.
-        let adjustedContent = a11y.textScale != .standard
-            ? AnyView(content.dynamicTypeSize(a11y.textScale.dynamicTypeSize))
-            : AnyView(content)
-        let boldContent = a11y.boldText
-            ? AnyView(adjustedContent.environment(\.legibilityWeight, .bold))
-            : AnyView(adjustedContent)
-        return boldContent
+        content
+            .dynamicTypeSize(a11y.textScale.dynamicTypeSize)
+            .environment(\.legibilityWeight, a11y.boldText ? .bold : .regular)
+            .contrast(a11y.highContrast ? 1.15 : 1.0)
             .transaction { tx in
                 if a11y.reduceMotion { tx.disablesAnimations = true }
             }
