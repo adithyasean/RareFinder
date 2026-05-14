@@ -8,6 +8,15 @@ import SwiftUI
 @Observable
 @MainActor
 final class AccessibilitySettings {
+    private static let preferenceKeys: [String] = [
+        Keys.bold,
+        Keys.contrast,
+        Keys.motion,
+        Keys.voiceHints,
+        Keys.haptics,
+        Keys.textScale
+    ]
+
     enum TextScale: String, CaseIterable, Identifiable {
         case standard, large, extraLarge
 
@@ -46,6 +55,14 @@ final class AccessibilitySettings {
         didSet { defaults.set(textScale.rawValue, forKey: Keys.textScale) }
     }
 
+    var legibilityWeightOverride: LegibilityWeight? {
+        boldText ? .bold : nil
+    }
+
+    var contrastMultiplier: Double {
+        highContrast ? 1.3 : 1.0
+    }
+
     init() {
         self.boldText = defaults.bool(forKey: Keys.bold)
         self.highContrast = defaults.bool(forKey: Keys.contrast)
@@ -80,6 +97,16 @@ final class AccessibilitySettings {
         textScale = .extraLarge
     }
 
+    static func resetPersistedOverrides(in defaults: UserDefaults = .standard) {
+        for key in preferenceKeys {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    static func isBoldTextEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: Keys.bold)
+    }
+
     private enum Keys {
         static let bold = "rf.a11y.boldText"
         static let contrast = "rf.a11y.highContrast"
@@ -96,14 +123,15 @@ final class AccessibilitySettings {
 /// Avoids AnyView to preserve SwiftUI structural identity — toggling a
 /// setting won't destroy the view tree (which would reset navigation).
 struct AccessibilityOverridesModifier: ViewModifier {
-    @Environment(AppState.self) private var appState
+    @Environment(AccessibilitySettings.self) private var a11y
 
     func body(content: Content) -> some View {
-        let a11y = appState.accessibility
         content
             .dynamicTypeSize(a11y.textScale.dynamicTypeSize)
-            .environment(\.legibilityWeight, a11y.boldText ? .bold : .regular)
-            .contrast(a11y.highContrast ? 1.15 : 1.0)
+            .environment(\.legibilityWeight, a11y.legibilityWeightOverride)
+            .fontWeight(a11y.boldText ? .bold : nil)
+            .contrast(a11y.contrastMultiplier)
+            .saturation(a11y.highContrast ? 1.05 : 1.0)
             .transaction { tx in
                 if a11y.reduceMotion { tx.disablesAnimations = true }
             }

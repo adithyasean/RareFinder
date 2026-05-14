@@ -67,6 +67,10 @@ extension View {
 }
 
 extension Font {
+    static var rfBodyWeightForCurrentAccessibility: Font.Weight {
+        AccessibilitySettings.isBoldTextEnabled() ? .bold : .medium
+    }
+
     static func rfTitle(_ size: CGFloat = 34) -> Font {
         .system(size: size, weight: .black, design: .default).width(.compressed)
     }
@@ -74,6 +78,6 @@ extension Font {
         .system(size: size, weight: .black, design: .default)
     }
     static func rfBody(_ size: CGFloat = 15) -> Font {
-        .system(size: size, weight: .medium, design: .default)
+        .system(size: size, weight: rfBodyWeightForCurrentAccessibility, design: .default)
     }
 }
