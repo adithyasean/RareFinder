@@ -13,7 +13,7 @@ struct BackendClient {
     }
 
     init(
-        baseURL: URL = URL(string: "http://localhost:8000")!,
+        baseURL: URL = URL(string: "https://webapp-rarefinder-prod.azurewebsites.net")!,
         session: URLSession = .shared,
         tokenProvider: (() -> String?)? = nil
     ) {
